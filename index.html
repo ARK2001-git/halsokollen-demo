@@ -1,0 +1,1701 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Hälsokollen">
+  <meta name="theme-color" content="#181818" id="themeColor">
+  <meta name="color-scheme" content="dark light">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <title>Hälsokollen</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; min-height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+      background: #0e0e0e;
+      color: #fafafa;
+      -webkit-font-smoothing: antialiased;
+      -webkit-tap-highlight-color: transparent;
+    }
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible {
+      outline: 2px solid #32845E;
+      outline-offset: 3px;
+    }
+    button:disabled { cursor: default; }
+    h1 { font-size: 29px; font-weight: 600; letter-spacing: -1px; margin: 2px 0 12px; }
+    h2 { font-size: 15px; font-weight: 500; margin: 0; }
+    p { margin: 0; }
+    #stage {
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 8px;
+    }
+    #phone {
+      --kk-green: #32845E;
+      --kk-bg: #181818;
+      --kk-text: #fafafa;
+      --kk-panel: #252525;
+      --kk-muted: #aaa;
+      --kk-secondary: #353535;
+      --kk-line: #3b3b3b;
+      --kk-field: #303030;
+      --kk-track: #414141;
+      --kk-segment-track: #2c2c2c;
+      --kk-segment-on: #3e3e3e;
+      --kk-radius: 22px;
+      --protein: #32845E;
+      --carbs: #84baff;
+      --fat: #eac76a;
+      width: 390px;
+      max-width: 390px;
+      height: 844px;
+      max-height: 844px;
+      background: var(--kk-bg);
+      color: var(--kk-text);
+      border: 1px solid #373737;
+      border-radius: 38px;
+      padding: 20px 20px 12px;
+      box-shadow: 0 18px 55px #0003;
+      font-size: 14px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+    #phone[data-theme="light"] {
+      --kk-bg: #f7f8f7;
+      --kk-text: #202824;
+      --kk-panel: #fff;
+      --kk-muted: #626c65;
+      --kk-secondary: #e7ece8;
+      --kk-line: #d9e0da;
+      --kk-field: #f2f5f2;
+      --kk-track: #dce3dd;
+      --kk-segment-track: #e7ece8;
+      --kk-segment-on: #fff;
+      border-color: #d2dad3;
+    }
+    #phone[data-theme="light"] { color-scheme: light; }
+    .status {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      padding: 0 5px 10px;
+      flex-shrink: 0;
+    }
+    .status-icons { display: flex; gap: 7px; color: var(--kk-text); }
+    .appearance {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: transparent;
+      color: var(--kk-text);
+      border: 0;
+      padding: 0;
+      min-height: 28px;
+      font-size: 12px;
+    }
+    #main {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 8px;
+    }
+    #main::-webkit-scrollbar { width: 0; height: 0; }
+    .muted { color: var(--kk-muted); font-size: 12px; }
+    .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .panel {
+      background: var(--kk-panel);
+      border-radius: var(--kk-radius);
+      padding: 16px;
+      margin-bottom: 10px;
+    }
+    .ring { width: 160px; height: 160px; margin: 10px auto; position: relative; }
+    .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+    .ring-label {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 3px;
+    }
+    .big {
+      font-size: 42px; letter-spacing: -1.7px; font-weight: 500;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+    .totals { display: flex; justify-content: space-around; text-align: center; margin-bottom: 14px; }
+    .totals b { display: block; font-size: 16px; font-weight: 500; margin-bottom: 3px; font-variant-numeric: tabular-nums; }
+    .macros { display: grid; grid-template-columns: repeat(3, 1fr); gap: 13px; }
+    .macro-label { font-size: 12px; color: var(--kk-muted); margin-bottom: 6px; }
+    .macro-val { font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .track { height: 5px; background: var(--kk-track); border-radius: 8px; margin-top: 9px; overflow: hidden; }
+    .fill { height: 100%; background: var(--kk-green); border-radius: 8px; }
+    .bars {
+      height: 58px; display: flex; align-items: end;
+      justify-content: space-between; gap: 13px; margin-top: 12px;
+    }
+    .bar-col {
+      flex: 1; height: 100%; display: flex; flex-direction: column;
+      justify-content: end; align-items: center; gap: 6px;
+      font-size: 11px; color: var(--kk-muted);
+    }
+    .bar { width: 100%; max-width: 25px; border-radius: 5px; background: var(--kk-track); min-height: 3px; }
+    .twocol { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .twocol .panel { padding: 16px; text-align: left; color: inherit; border: 0; width: 100%; margin-bottom: 0; }
+    button.panel { display: block; }
+    .metric { font-size: 26px; font-weight: 500; letter-spacing: -0.7px; margin: 8px 0 4px; font-variant-numeric: tabular-nums; }
+    .metric small { font-size: 12px; color: var(--kk-muted); letter-spacing: 0; }
+    .spark { width: 100%; height: 35px; margin-top: 5px; display: block; }
+    .primary {
+      background: var(--kk-green); color: #fff; border: 0; border-radius: 16px;
+      width: 100%; min-height: 50px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      margin: 6px 0 14px;
+    }
+    .primary:disabled { opacity: 0.5; }
+    .secondary {
+      background: var(--kk-secondary); color: var(--kk-text); border: 0;
+      border-radius: 14px; padding: 13px 16px; min-height: 44px;
+    }
+    nav.tabs {
+      border-top: 1px solid var(--kk-line);
+      display: flex; padding-top: 10px; gap: 5px;
+      flex-shrink: 0;
+    }
+    nav.tabs button {
+      flex: 1; min-height: 48px; border: 0; background: transparent;
+      color: var(--kk-muted); display: flex; flex-direction: column;
+      align-items: center; gap: 5px; font-size: 10px;
+    }
+    nav.tabs button.active { color: var(--kk-text); }
+    nav.tabs button.active svg { color: var(--kk-green); }
+    .homebar {
+      width: 110px; height: 4px; border-radius: 10px;
+      background: var(--kk-muted); margin: 14px auto 0; flex-shrink: 0;
+    }
+    .back {
+      border: 0; color: var(--kk-text); background: transparent;
+      padding: 0; min-height: 35px; display: flex; gap: 5px;
+      align-items: center; margin-bottom: 8px;
+    }
+    textarea, input[type="text"], input[type="number"], input:not([type]) {
+      width: 100%; background: var(--kk-field); color: var(--kk-text);
+      border: 1px solid var(--kk-line); border-radius: 13px;
+      padding: 13px; font-size: 16px;
+    }
+    textarea { resize: vertical; min-height: 110px; margin-top: 8px; }
+    label { display: block; margin: 14px 0 8px; color: var(--kk-muted); font-size: 13px; }
+    .listrow { padding: 15px 0; border-bottom: 1px solid var(--kk-line); }
+    .listrow:last-child { border-bottom: 0; }
+    .subhead { margin: 24px 0 12px; }
+    .weight-chart { width: 100%; height: 160px; margin: 20px 0 8px; display: block; }
+    .weekdays { display: flex; justify-content: space-between; color: var(--kk-muted); font-size: 11px; }
+    .note { font-size: 11px; color: var(--kk-muted); text-align: center; margin-top: 10px; }
+    .demo {
+      color: var(--kk-muted); font-size: 11px; letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+    .spacer { height: 18px; }
+    .icon { display: block; flex-shrink: 0; }
+    .inline-icon { display: inline-block; vertical-align: -3px; }
+    .meal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    .meal-btn {
+      border: 0; border-radius: 12px; min-height: 44px;
+      background: var(--kk-secondary); color: var(--kk-text);
+      font-size: 13px; font-weight: 500;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 13px 8px;
+    }
+    .meal-btn.selected { background: var(--kk-green); color: #fff; }
+    .date-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      margin: 4px 0 8px;
+    }
+    .date-nav button {
+      width: 44px; height: 44px; border: 0; background: transparent;
+      color: var(--kk-text); display: flex; align-items: center; justify-content: center;
+    }
+    .date-nav button:disabled { opacity: 0.3; }
+    .date-nav .date-label { flex: 1; text-align: center; font-size: 13px; }
+    .checks { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; }
+    .check-item {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--kk-green);
+    }
+    .hint { font-size: 12px; color: var(--kk-muted); margin-top: 8px; line-height: 1.4; }
+    .error { color: #e07070; font-size: 13px; margin: 8px 0; }
+    .ok { color: var(--kk-green); font-size: 13px; margin: 8px 0; }
+    .amount-row { display: flex; align-items: center; gap: 8px; }
+    .amount-row input {
+      width: 90px; text-align: right; padding: 10px 12px; flex: 0 0 auto;
+    }
+    .review-total { font-size: 22px; font-weight: 700; margin: 8px 0 16px; }
+    .toast {
+      position: absolute; left: 24px; right: 24px; bottom: 110px;
+      background: var(--kk-green); color: #fff; border-radius: 14px;
+      padding: 12px 16px; text-align: center; font-size: 13px; font-weight: 500;
+      box-shadow: 0 8px 24px #0004;
+      opacity: 0; transform: translateY(8px); pointer-events: none;
+      transition: opacity .25s, transform .25s;
+      z-index: 5;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .modal-backdrop {
+      position: absolute; inset: 0; background: #0008;
+      display: flex; align-items: flex-end; justify-content: center;
+      z-index: 6; padding: 20px;
+    }
+    .modal {
+      background: var(--kk-panel); color: var(--kk-text);
+      border-radius: 22px; padding: 22px 18px 16px; width: 100%;
+    }
+    .modal h2 { font-size: 17px; margin-bottom: 8px; }
+    .modal .muted { margin-bottom: 16px; font-size: 13px; }
+    .settings-intro { color: var(--kk-muted); font-size: 12px; margin: 0; }
+    .week-title { font-weight: 500; }
+    .chip {
+      display: inline-block; font-size: 10px; letter-spacing: .4px;
+      text-transform: uppercase; color: var(--kk-muted);
+    }
+
+    .segments {
+      display: flex;
+      background: var(--kk-segment-track);
+      border-radius: 12px;
+      padding: 3px;
+      margin: 0 0 18px;
+      gap: 3px;
+    }
+    .segments button {
+      flex: 1;
+      border: 0;
+      background: transparent;
+      color: var(--kk-muted);
+      min-height: 34px;
+      border-radius: 9px;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 8px;
+    }
+    .segments button.active {
+      background: var(--kk-segment-on);
+      color: var(--kk-text);
+      box-shadow: 0 1px 3px #0003;
+    }
+.goal-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--kk-line);
+    }
+    .goal-row:last-of-type { border-bottom: 0; }
+    .goal-row .goal-label {
+      margin: 0;
+      flex: 1;
+      color: var(--kk-text);
+      font-size: 14px;
+    }
+    .goal-row input {
+      width: 96px;
+      text-align: right;
+      padding: 10px 12px;
+      flex: 0 0 auto;
+      font-variant-numeric: tabular-nums;
+    }
+    .goal-row .unit {
+      color: var(--kk-muted);
+      min-width: 36px;
+      font-size: 13px;
+    }
+    @media (max-width: 430px) {
+      html, body { background: #181818; min-height: 100dvh; min-height: 100svh; }
+      body.light { background: #f7f8f7; }
+      #stage { padding: 0; min-height: 100dvh; min-height: 100svh; align-items: stretch; }
+      #phone {
+        width: 100%; max-width: none;
+        height: 100dvh; height: 100svh; max-height: none;
+        border: 0; border-radius: 0; box-shadow: none;
+        padding: 0 20px;
+      }
+      .status {
+        padding-top: calc(8px + env(safe-area-inset-top, 0px));
+        padding-right: 5px;
+        padding-bottom: 10px;
+        padding-left: 5px;
+      }
+      nav.tabs {
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
+      .homebar { display: none; }
+      .status-icons { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <div id="phone" data-theme="dark" aria-label="Hälsokollen">
+      <div class="status">
+        <button type="button" class="appearance" id="appearanceBtn" aria-label="Byt till ljust läge"></button>
+        <span class="status-icons" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 16c4-6 8-8 10-8s6 2 10 8"/><path d="M6 16c2.5-3.5 5-5 6-5s3.5 1.5 6 5"/><circle cx="12" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12.5c2.5-3 4.8-4.5 7-4.5s4.5 1.5 7 4.5"/><path d="M8.5 15c1.5-1.8 2.7-2.6 3.5-2.6s2 0.8 3.5 2.6"/><circle cx="12" cy="18" r="1.2" fill="currentColor" stroke="none"/></svg>
+          <svg width="20" height="16" viewBox="0 0 24 16" fill="currentColor"><rect x="0" y="3" width="18" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="2" y="5" width="12" height="6" rx="1"/><rect x="18.5" y="6" width="2" height="4" rx="0.6"/></svg>
+        </span>
+      </div>
+      <main id="main" aria-live="polite"></main>
+      <nav class="tabs" aria-label="Huvudnavigation">
+        <button type="button" data-tab="overview" class="active" id="tab-overview"></button>
+        <button type="button" data-tab="history" id="tab-history"></button>
+        <button type="button" data-tab="settings" id="tab-settings"></button>
+      </nav>
+      <div class="homebar"></div>
+      <div class="toast" id="toast" role="status"></div>
+    </div>
+  </div>
+  <script>
+(function () {
+  "use strict";
+
+  const STORE_KEY = "halsokollen-demo-v1";
+  const DEFAULT_GOALS = { calories: 2050, protein: 170, carbs: 196, fat: 65, startWeight: 100, targetWeight: 83, steps: 7000 };
+  const GOALS = { calories: 2050, protein: 170, carbs: 196, fat: 65, startWeight: 100, targetWeight: 83, steps: 7000 };
+  const GOAL_FIELDS = [
+    { key: "calories", label: "Kalorimål", unit: "kcal", kind: "int", min: 1, max: 20000 },
+    { key: "protein", label: "Protein", unit: "g", kind: "int", min: 0, max: 1000 },
+    { key: "carbs", label: "Kolhydrater", unit: "g", kind: "int", min: 0, max: 1000 },
+    { key: "fat", label: "Fett", unit: "g", kind: "int", min: 0, max: 1000 },
+    { key: "startWeight", label: "Startvikt", unit: "kg", kind: "dec", min: 0.1, max: 500 },
+    { key: "targetWeight", label: "Målvikt", unit: "kg", kind: "dec", min: 0.1, max: 500 },
+    { key: "steps", label: "Stegmål", unit: "steg", kind: "int", min: 1, max: 100000 }
+  ];
+  const SETTINGS_TABS = [
+    { id: "goals", label: "Mina mål" },
+    { id: "app", label: "Appinställningar" }
+  ];
+  const EXAMPLE_STEPS = 4820;
+  const CIRC = 2 * Math.PI * 78;
+  const KINDS = ["Frukost", "Lunch", "Middag", "Mellanmål"];
+  const WEEKDAYS_NARROW = ["M", "T", "O", "T", "F", "L", "S"];
+  const WEEKDAYS_SHORT = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"];
+  const MONTHS = ["januari","februari","mars","april","maj","juni","juli","augusti","september","oktober","november","december"];
+  const MONTHS_SHORT = ["jan","feb","mars","apr","maj","juni","juli","aug","sep","okt","nov","dec"];
+  const WEEKDAYS_LONG = ["söndag","måndag","tisdag","onsdag","torsdag","fredag","lördag"];
+
+  const ICONS = {
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
+    moon: '<path d="M21 14.3A8.5 8.5 0 1 1 9.7 3 7 7 0 0 0 21 14.3z"/>',
+    dashboard: '<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    sliders: '<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M2 14h4M10 8h4M18 16h4"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    sparkles: '<path d="M12 3l1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6L12 3z"/><path d="M19 15l.7 2.1L22 18l-2.3.9L19 21l-.7-2.1L16 18l2.3-.9L19 15z"/>',
+    chevronLeft: '<path d="M15 18l-6-6 6-6"/>',
+    chevronRight: '<path d="M9 18l6-6-6-6"/>',
+    check: '<path d="M5 12l5 5L20 7"/>',
+    checkCircle: '<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>'
+  };
+
+  function icon(name, size) {
+    size = size || 18;
+    return '<svg class="icon" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
+  }
+
+  function pad(n) { return n < 10 ? "0" + n : String(n); }
+  function startOfDay(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
+  function isoDay(d) {
+    const x = startOfDay(d);
+    return x.getFullYear() + "-" + pad(x.getMonth() + 1) + "-" + pad(x.getDate());
+  }
+  function parseISODay(s) {
+    const p = s.split("-").map(Number);
+    return new Date(p[0], p[1] - 1, p[2]);
+  }
+  function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+  function isToday(d) { return isoDay(d) === isoDay(new Date()); }
+  function isYesterday(d) { return isoDay(d) === isoDay(addDays(new Date(), -1)); }
+  function isFutureDay(d) { return startOfDay(d) > startOfDay(new Date()); }
+  function mondayOf(d) {
+    const x = startOfDay(d);
+    const dow = x.getDay(); // 0 sun
+    const offset = dow === 0 ? -6 : 1 - dow;
+    return addDays(x, offset);
+  }
+  function weekNumber(d) {
+    const date = startOfDay(d);
+    date.setHours(0, 0, 0, 0);
+    // ISO week
+    const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    tmp.setUTCDate(tmp.getUTCDate() + 4 - (tmp.getUTCDay() || 7));
+    const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
+    return Math.ceil(((tmp - yearStart) / 86400000 + 1) / 7);
+  }
+  function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+  function formatDateLong(d, withWeekday) {
+    const x = d instanceof Date ? d : parseISODay(d);
+    const body = x.getDate() + " " + MONTHS[x.getMonth()];
+    if (!withWeekday) return body;
+    return cap(WEEKDAYS_LONG[x.getDay()]) + " " + body;
+  }
+  function formatDateShort(d) {
+    const x = d instanceof Date ? d : parseISODay(d);
+    return x.getDate() + " " + MONTHS_SHORT[x.getMonth()];
+  }
+  function formatHistoryDay(d) {
+    const x = d instanceof Date ? d : parseISODay(d);
+    if (isToday(x)) return "Idag · " + x.getDate() + " " + MONTHS[x.getMonth()];
+    if (isYesterday(x)) return "Igår · " + x.getDate() + " " + MONTHS[x.getMonth()];
+    return cap(WEEKDAYS_LONG[x.getDay()]) + " · " + x.getDate() + " " + MONTHS[x.getMonth()] + " " + x.getFullYear();
+  }
+  function mealDateLabel(d) {
+    const x = d instanceof Date ? d : parseISODay(d);
+    const body = x.getDate() + " " + MONTHS[x.getMonth()];
+    return isToday(x) ? "Idag, " + body : body;
+  }
+  function weightDateLabel(d) {
+    const x = d instanceof Date ? d : parseISODay(d);
+    if (isToday(x)) return "Idag";
+    return cap(WEEKDAYS_LONG[x.getDay()]) + " " + x.getDate() + " " + MONTHS[x.getMonth()] + " " + x.getFullYear();
+  }
+  function weekRangeLabel(mon) {
+    const sun = addDays(mon, 6);
+    if (mon.getMonth() === sun.getMonth()) {
+      return mon.getDate() + "–" + sun.getDate() + " " + MONTHS_SHORT[mon.getMonth()];
+    }
+    return formatDateShort(mon) + "–" + formatDateShort(sun);
+  }
+  function num(v) {
+    return Math.round(v).toLocaleString("sv-SE");
+  }
+  function dec(v, digits) {
+    digits = digits == null ? 1 : digits;
+    return Number(v).toLocaleString("sv-SE", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  }
+  function parseNum(text) {
+    if (text == null) return null;
+    const v = Number(String(text).replace(/\s/g, "").replace(",", "."));
+    return Number.isFinite(v) ? v : null;
+  }
+  function uid() {
+    return "id-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+  }
+  function suggestedKind(date) {
+    const h = (date instanceof Date ? date : new Date()).getHours();
+    if (h >= 6 && h <= 9) return "Frukost";
+    if (h >= 11 && h <= 12) return "Lunch";
+    if (h >= 16 && h <= 19) return "Middag";
+    return "Mellanmål";
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
+    });
+  }
+
+  /* Explicit unit detection, same idea as ExplicitAmounts.swift */
+  const UNIT_RE = /(?<![\p{L}\d.,−-])(\d+(?:[.,]\d+)?)\s*(milliliter|centiliter|deciliter|gram|ml|cl|dl|g)\b/giu;
+  function explicitAmounts(text) {
+    const out = [];
+    const re = new RegExp(UNIT_RE.source, "giu");
+    let m;
+    while ((m = re.exec(text))) {
+      const n = parseNum(m[1]);
+      if (n == null || n <= 0) continue;
+      const t = m[2].toLowerCase();
+      let unit = "dl";
+      if (t === "gram" || t === "g") unit = "g";
+      else if (t === "milliliter" || t === "ml") unit = "ml";
+      else if (t === "centiliter" || t === "cl") unit = "cl";
+      out.push(m[1].replace(".", ",") + " " + unit);
+    }
+    return out;
+  }
+
+  /* Livsmedelstabell: ungefärliga värden per 100 g eller 100 ml. Endast för demon. */
+  const FOODS = [
+    { keys: ["kebabrulle", "kebabtallrik", "kebab"], name: "Kebabrulle", kcal: 230, p: 11, c: 22, f: 11, def: 350, u: "g" },
+    { keys: ["kycklingfilé", "kycklingfile", "kyckling"], name: "Kycklingfilé, tillagad", kcal: 165, p: 31, c: 0, f: 3.6, def: 150, u: "g" },
+    { keys: ["kokt ris", "ris"], name: "Ris, kokt", kcal: 130, p: 2.7, c: 28, f: 0.3, def: 200, u: "g" },
+    { keys: ["yoghurtsås", "yoghurtsas", "yoghurtsoas"], name: "Yoghurtsås", kcal: 120, p: 3, c: 5, f: 10, def: 50, u: "g" },
+    { keys: ["kvarg", "keso", "cottage cheese"], name: "Kvarg", kcal: 59, p: 10, c: 3.5, f: 0.4, def: 200, u: "g" },
+    { keys: ["havregröt", "havregryn", "havre"], name: "Havregryn", kcal: 370, p: 13, c: 58, f: 7, def: 40, u: "g" },
+    { keys: ["blåbär", "hallon", "jordgubbar", "björnbär", "bär"], name: "Bär", kcal: 45, p: 0.7, c: 8, f: 0.4, def: 100, u: "g" },
+    { keys: ["laxfilé", "laxfile", "lax"], name: "Lax, tillagad", kcal: 220, p: 20, c: 0, f: 15, def: 150, u: "g" },
+    { keys: ["potatis"], name: "Potatis, kokt", kcal: 77, p: 2, c: 17, f: 0.1, def: 200, u: "g" },
+    { keys: ["smörgåsar", "smörgås", "mackor", "macka"], name: "Smörgås", kcal: 250, p: 9, c: 30, f: 10, def: 80, u: "g", piece: 80 },
+    { keys: ["knäckebröd", "knackebrod"], name: "Knäckebröd", kcal: 360, p: 9, c: 67, f: 3, def: 24, u: "g", piece: 12 },
+    { keys: ["bröd", "brod", "levain", "limpa", "rostat bröd"], name: "Bröd", kcal: 260, p: 8, c: 49, f: 3.2, def: 60, u: "g", piece: 30 },
+    { keys: ["äpplen", "äpple", "apple"], name: "Äpple", kcal: 52, p: 0.3, c: 14, f: 0.2, def: 150, u: "g", piece: 150 },
+    { keys: ["banan"], name: "Banan", kcal: 89, p: 1.1, c: 23, f: 0.3, def: 120, u: "g", piece: 120 },
+    { keys: ["apelsiner", "apelsin"], name: "Apelsin", kcal: 47, p: 0.9, c: 12, f: 0.1, def: 150, u: "g", piece: 150 },
+    { keys: ["apelsinjuice", "juice"], name: "Juice", kcal: 45, p: 0.6, c: 10, f: 0.1, def: 200, u: "ml" },
+    { keys: ["mjölk", "mjolk"], name: "Mjölk", kcal: 47, p: 3.4, c: 4.9, f: 1.5, def: 200, u: "ml" },
+    { keys: ["filmjölk", "fil"], name: "Filmjölk", kcal: 47, p: 3.3, c: 4.8, f: 1.5, def: 200, u: "ml" },
+    { keys: ["yoghurt", "yogurt"], name: "Yoghurt", kcal: 62, p: 3.5, c: 4.7, f: 3.3, def: 200, u: "g" },
+    { keys: ["hårdost", "ost"], name: "Ost", kcal: 387, p: 25, c: 1.3, f: 31, def: 30, u: "g", piece: 15 },
+    { keys: ["smör", "smor"], name: "Smör", kcal: 717, p: 0.9, c: 0.1, f: 81, def: 10, u: "g" },
+    { keys: ["ägg", "agg"], name: "Ägg", kcal: 155, p: 13, c: 1.1, f: 11, def: 60, u: "g", piece: 60 },
+    { keys: ["pasta", "spaghetti"], name: "Pasta, kokt", kcal: 157, p: 5.8, c: 30, f: 0.9, def: 200, u: "g" },
+    { keys: ["köttbullar", "kottbullar"], name: "Köttbullar", kcal: 250, p: 16, c: 8, f: 16, def: 150, u: "g" },
+    { keys: ["köttfärs", "kottfars", "färs"], name: "Köttfärs, stekt", kcal: 240, p: 26, c: 0, f: 15, def: 125, u: "g" },
+    { keys: ["fläsk", "flaskkarré", "fläskkarré"], name: "Fläskkött", kcal: 242, p: 26, c: 0, f: 15, def: 150, u: "g" },
+    { keys: ["bacon"], name: "Bacon", kcal: 393, p: 13, c: 1, f: 37, def: 25, u: "g" },
+    { keys: ["skinka"], name: "Skinka", kcal: 110, p: 19, c: 1, f: 3, def: 40, u: "g" },
+    { keys: ["torsk", "fisk"], name: "Fisk, tillagad", kcal: 105, p: 23, c: 0, f: 1.2, def: 150, u: "g" },
+    { keys: ["tonfisk"], name: "Tonfisk", kcal: 116, p: 26, c: 0, f: 1, def: 100, u: "g" },
+    { keys: ["räkor", "rakor"], name: "Räkor", kcal: 99, p: 24, c: 0.2, f: 0.3, def: 100, u: "g" },
+    { keys: ["avokado"], name: "Avokado", kcal: 160, p: 2, c: 9, f: 15, def: 100, u: "g" },
+    { keys: ["tomat", "tomater"], name: "Tomat", kcal: 18, p: 0.9, c: 3.9, f: 0.2, def: 80, u: "g" },
+    { keys: ["gurka"], name: "Gurka", kcal: 15, p: 0.7, c: 3.6, f: 0.1, def: 80, u: "g" },
+    { keys: ["sallad", "salladshuvud"], name: "Sallad", kcal: 15, p: 1.2, c: 2.9, f: 0.2, def: 50, u: "g" },
+    { keys: ["broccoli"], name: "Broccoli", kcal: 34, p: 2.8, c: 7, f: 0.4, def: 150, u: "g" },
+    { keys: ["morötter", "morot"], name: "Morot", kcal: 41, p: 0.9, c: 10, f: 0.2, def: 80, u: "g" },
+    { keys: ["bönor", "bonor", "vita bönor"], name: "Bönor, kokta", kcal: 127, p: 8.7, c: 23, f: 0.5, def: 150, u: "g" },
+    { keys: ["linser"], name: "Linser, kokta", kcal: 116, p: 9, c: 20, f: 0.4, def: 150, u: "g" },
+    { keys: ["hummus"], name: "Hummus", kcal: 166, p: 8, c: 14, f: 9, def: 50, u: "g" },
+    { keys: ["olivolja", "olja"], name: "Olivolja", kcal: 884, p: 0, c: 0, f: 100, def: 10, u: "ml" },
+    { keys: ["nötter", "mandel", "cashew", "valnötter"], name: "Nötter", kcal: 607, p: 20, c: 7, f: 54, def: 30, u: "g" },
+    { keys: ["jordnötssmör", "jordnotssmor"], name: "Jordnötssmör", kcal: 588, p: 25, c: 20, f: 50, def: 20, u: "g" },
+    { keys: ["proteinpulver", "proteinshake", "whey"], name: "Proteinpulver", kcal: 380, p: 80, c: 5, f: 3, def: 30, u: "g" },
+    { keys: ["kaffe"], name: "Kaffe", kcal: 2, p: 0.1, c: 0, f: 0, def: 200, u: "ml" },
+    { keys: ["te"], name: "Te", kcal: 1, p: 0, c: 0, f: 0, def: 200, u: "ml" },
+    { keys: ["vatten"], name: "Vatten", kcal: 0, p: 0, c: 0, f: 0, def: 250, u: "ml" },
+    { keys: ["läsk", "lask", "cola"], name: "Läsk", kcal: 42, p: 0, c: 10.6, f: 0, def: 330, u: "ml" },
+    { keys: ["choklad"], name: "Choklad", kcal: 530, p: 6, c: 59, f: 30, def: 25, u: "g" },
+    { keys: ["glass"], name: "Glass", kcal: 200, p: 3.5, c: 24, f: 10, def: 100, u: "g" },
+    { keys: ["chips"], name: "Chips", kcal: 536, p: 6, c: 50, f: 35, def: 30, u: "g" },
+    { keys: ["popcorn"], name: "Popcorn", kcal: 387, p: 11, c: 78, f: 4.5, def: 30, u: "g" },
+    { keys: ["pizza"], name: "Pizza", kcal: 266, p: 11, c: 33, f: 10, def: 300, u: "g" },
+    { keys: ["hamburgare", "hamburger"], name: "Hamburgare", kcal: 260, p: 13, c: 24, f: 12, def: 200, u: "g" },
+    { keys: ["pommes", "pommes frites", "frites"], name: "Pommes frites", kcal: 312, p: 3.4, c: 41, f: 15, def: 150, u: "g" },
+    { keys: ["korv"], name: "Korv", kcal: 265, p: 12, c: 5, f: 22, def: 80, u: "g" },
+    { keys: ["pannkakor", "pannkaka"], name: "Pannkaka", kcal: 220, p: 6, c: 28, f: 9, def: 150, u: "g" },
+    { keys: ["gröt"], name: "Gröt", kcal: 70, p: 2.5, c: 12, f: 1.5, def: 250, u: "g" },
+    { keys: ["flingor"], name: "Flingor", kcal: 370, p: 8, c: 80, f: 2, def: 40, u: "g" },
+    { keys: ["couscous"], name: "Couscous, kokt", kcal: 112, p: 3.8, c: 23, f: 0.2, def: 180, u: "g" },
+    { keys: ["quinoa"], name: "Quinoa, kokt", kcal: 120, p: 4.4, c: 21, f: 1.9, def: 180, u: "g" },
+    { keys: ["kalkon"], name: "Kalkon", kcal: 135, p: 29, c: 0, f: 2, def: 150, u: "g" }
+  ];
+
+  function findFood(text) {
+    const t = text.toLowerCase();
+    let best = null, bestLen = 0;
+    for (let i = 0; i < FOODS.length; i++) {
+      const f = FOODS[i];
+      for (let k = 0; k < f.keys.length; k++) {
+        const key = f.keys[k];
+        if (key.length > bestLen && t.indexOf(key) !== -1) {
+          best = f;
+          bestLen = key.length;
+        }
+      }
+    }
+    return best;
+  }
+
+  function toMl(amount, unit) {
+    if (unit === "cl") return amount * 10;
+    if (unit === "dl") return amount * 100;
+    return amount;
+  }
+
+  function scaleNutrients(food, amount, unit) {
+    const qty = (unit === "ml" || unit === "cl" || unit === "dl") ? toMl(amount, unit) : amount;
+    const factor = qty / 100;
+    return {
+      kcal: food.kcal * factor,
+      protein: food.p * factor,
+      carbs: food.c * factor,
+      fat: food.f * factor
+    };
+  }
+
+  function parseMealText(text) {
+    const raw = text.trim();
+    if (!raw) return { items: [], error: "Skriv vad du har ätit eller druckit." };
+    const normalized = raw.replace(/&/g, " och ");
+    let parts = normalized.split(/\s*(?:,|;|\n|(?:\s+och\s+)|\s+med\s+)\s*/).map(function (s) { return s.trim(); }).filter(Boolean);
+    const cleaned = [];
+    for (let i = 0; i < parts.length; i++) {
+      const p = parts[i];
+      const tot = p.match(/^(?:totalt|totalt sett)\s+(\d+(?:[.,]\d+)?)\s*(milliliter|centiliter|deciliter|gram|ml|cl|dl|g)\b/i);
+      const per = p.match(/^(\d+(?:[.,]\d+)?)\s*(milliliter|centiliter|deciliter|gram|ml|cl|dl|g)\s+per\s+(skiva|skivor|glas|st|bit|bitar|portion|portioner)\b/i);
+      if ((tot || per) && cleaned.length) {
+        cleaned[cleaned.length - 1] += ", " + p;
+      } else {
+        cleaned.push(p);
+      }
+    }
+    const items = [];
+    const unknown = [];
+    cleaned.forEach(function (part) {
+      const item = interpretPart(part);
+      if (item) items.push(item);
+      else unknown.push(part);
+    });
+    if (!items.length) {
+      return { items: [], error: "Jag kände inte igen något livsmedel. Prova till exempel kebabrulle eller bröd 80 g." };
+    }
+    return { items: items, warning: unknown.length ? "Kunde inte tolka: " + unknown.join(", ") : null };
+  }
+
+  function unitFromToken(t) {
+    t = t.toLowerCase();
+    if (t === "gram" || t === "g") return "g";
+    if (t === "milliliter" || t === "ml") return "ml";
+    if (t === "centiliter" || t === "cl") return "cl";
+    return "dl";
+  }
+
+  function interpretPart(part) {
+    const food = findFood(part);
+    if (!food) return null;
+
+    let amount = null;
+    let unit = food.u;
+    let source = "estimated";
+    let explanation = "Normal portion uppskattad i demon, eftersom ingen mängd angavs.";
+
+    const totalM = part.match(/(?:totalt|totalt sett)\s+(\d+(?:[.,]\d+)?)\s*(milliliter|centiliter|deciliter|gram|ml|cl|dl|g)\b/i);
+    const perM = part.match(/(\d+(?:[.,]\d+)?)\s*(milliliter|centiliter|deciliter|gram|ml|cl|dl|g)\s+per\s+(skiva|skivor|glas|st|bit|bitar|portion|portioner)\b/i);
+    const countM = part.match(/(\d+(?:[.,]\d+)?)\s*(skivor|skiva|glas|klick|nävar|näve|portioner|portion|bitar|bit|\bst\b)/i);
+    const unitM = part.match(/(\d+(?:[.,]\d+)?)\s*(milliliter|centiliter|deciliter|gram|ml|cl|dl|g)\b/i);
+    const klick = /klick/i.test(part);
+
+    if (perM && countM) {
+      const count = parseNum(countM[1]);
+      const per = parseNum(perM[1]);
+      const u = unitFromToken(perM[2]);
+      amount = count * per;
+      unit = (u === "g") ? "g" : "ml";
+      if (u === "cl") amount = amount * 10;
+      if (u === "dl") amount = amount * 100;
+      source = "user";
+      explanation = count.toLocaleString("sv-SE") + " × " + String(perM[1]).replace(".", ",") + " " + u + " per " + perM[3] + ".";
+    } else if (totalM) {
+      amount = parseNum(totalM[1]);
+      const u = unitFromToken(totalM[2]);
+      if (u === "g") { unit = "g"; }
+      else { unit = "ml"; amount = toMl(amount, u); }
+      source = "user";
+      explanation = "Angiven totalmängd: " + String(totalM[1]).replace(".", ",") + " " + u + ".";
+    } else if (unitM) {
+      amount = parseNum(unitM[1]);
+      const u = unitFromToken(unitM[2]);
+      if (u === "g") { unit = "g"; }
+      else { unit = "ml"; amount = toMl(amount, u); }
+      source = "user";
+      explanation = "Angiven mängd: " + String(unitM[1]).replace(".", ",") + " " + u + ".";
+    } else if (countM) {
+      const count = parseNum(countM[1]);
+      const piece = food.piece || food.def;
+      const word = countM[2].toLowerCase();
+      if (word === "klick") {
+        amount = count * 15;
+        unit = food.u === "ml" ? "ml" : "g";
+        explanation = "Uppskattad klick, " + dec(amount, 0) + " " + unit + ".";
+      } else if (word === "glas") {
+        amount = count * (food.u === "ml" ? food.def : 200);
+        unit = "ml";
+        explanation = "Uppskattat glas, " + dec(amount, 0) + " ml.";
+      } else {
+        amount = count * piece;
+        unit = "g";
+        explanation = "Uppskattat " + count.toLocaleString("sv-SE") + " " + word + " à " + dec(piece, 0) + " g.";
+      }
+      source = "estimated";
+    } else if (klick) {
+      amount = 15;
+      unit = food.u === "ml" ? "ml" : "g";
+      source = "estimated";
+      explanation = "En klick uppskattad till " + amount + " " + unit + ".";
+    } else {
+      amount = food.def;
+      unit = food.u;
+      source = "estimated";
+      explanation = "Normal portion uppskattad till " + dec(amount, 0) + " " + unit + ".";
+    }
+
+    // Display volume in ml (cl/dl already converted)
+    if (unit === "cl" || unit === "dl") {
+      amount = toMl(amount, unit);
+      unit = "ml";
+    }
+
+    const per100 = { kcal: food.kcal, protein: food.p, carbs: food.c, fat: food.f };
+    return {
+      id: uid(),
+      name: food.name,
+      amount: amount,
+      unit: unit,
+      per100: per100,
+      quantitySource: source,
+      quantityExplanation: explanation,
+      nutritionSource: "Inbyggd livsmedelstabell (demo)"
+    };
+  }
+
+  function itemTotals(item) {
+    const f = item.amount / 100;
+    return {
+      kcal: item.per100.kcal * f,
+      protein: item.per100.protein * f,
+      carbs: item.per100.carbs * f,
+      fat: item.per100.fat * f
+    };
+  }
+
+  function sumItems(items) {
+    return items.reduce(function (s, it) {
+      const t = itemTotals(it);
+      return { kcal: s.kcal + t.kcal, protein: s.protein + t.protein, carbs: s.carbs + t.carbs, fat: s.fat + t.fat };
+    }, { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+  }
+
+  /* State */
+  const state = {
+    view: "overview",
+    appearance: "dark", // dark | light | system
+    meals: [],
+    weights: [],
+    mealDraft: { text: "", date: isoDay(new Date()), kind: suggestedKind(new Date()) },
+    review: null,
+    weightDate: isoDay(new Date()),
+    weightValue: "",
+    weightWeekOffset: 0,
+    weightMessage: null,
+    weightError: null,
+    aiBusy: false,
+    aiError: null,
+    modal: null,
+    seeded: false,
+    settingsTab: "goals"
+  };
+
+  function exampleData() {
+    const today = startOfDay(new Date());
+    const day = function (offset) { return isoDay(addDays(today, offset)); };
+    const meals = [
+      { id: "ex-bf", name: "Kvarg, havregryn & bär", date: day(0), kind: "Frukost", calories: 450, protein: 40, carbs: 50, fat: 10, example: true },
+      { id: "ex-lu", name: "Lax med potatis", date: day(0), kind: "Lunch", calories: 670, protein: 50, carbs: 55, fat: 28, example: true },
+      { id: "ex-sn", name: "Smörgås & äpple", date: day(0), kind: "Mellanmål", calories: 300, protein: 22, carbs: 30, fat: 10, example: true },
+      { id: "ex-y1", name: "Havregröt & kaffe", date: day(-1), kind: "Frukost", calories: 380, protein: 14, carbs: 58, fat: 8, example: true },
+      { id: "ex-y2", name: "Kyckling, ris & yoghurtsås", date: day(-1), kind: "Lunch", calories: 520, protein: 42, carbs: 60, fat: 12, example: true },
+      { id: "ex-y3", name: "Kebabrulle", date: day(-1), kind: "Middag", calories: 805, protein: 39, carbs: 77, fat: 39, example: true },
+      { id: "ex-y4", name: "Äpple", date: day(-1), kind: "Mellanmål", calories: 275, protein: 3, carbs: 55, fat: 4, example: true }
+    ];
+    const weights = [
+      { id: "ex-w1", date: day(-14), kilograms: 97.4, example: true },
+      { id: "ex-w2", date: day(-11), kilograms: 97.1, example: true },
+      { id: "ex-w3", date: day(-7), kilograms: 97.0, example: true },
+      { id: "ex-w4", date: day(-5), kilograms: 96.8, example: true },
+      { id: "ex-w5", date: day(-3), kilograms: 96.6, example: true },
+      { id: "ex-w6", date: day(-1), kilograms: 96.5, example: true },
+      { id: "ex-w7", date: day(0), kilograms: 96.4, example: true }
+    ];
+    return { meals: meals, weights: weights };
+  }
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return false;
+      const data = JSON.parse(raw);
+      if (!data || !Array.isArray(data.meals) || !Array.isArray(data.weights)) return false;
+      state.meals = data.meals;
+      state.weights = data.weights;
+      if (data.appearance) state.appearance = data.appearance;
+      if (data.goals) applyGoals(data.goals);
+      state.seeded = !!data.seeded;
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify({
+        meals: state.meals,
+        weights: state.weights,
+        appearance: state.appearance,
+        goals: { calories: GOALS.calories, protein: GOALS.protein, carbs: GOALS.carbs, fat: GOALS.fat, startWeight: GOALS.startWeight, targetWeight: GOALS.targetWeight, steps: GOALS.steps },
+        seeded: true
+      }));
+    } catch (e) { /* private mode etc. */ }
+  }
+
+  function resolveTheme() {
+    if (state.appearance === "light") return "light";
+    if (state.appearance === "dark") return "dark";
+    return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  }
+
+  function applyTheme() {
+    const theme = resolveTheme();
+    const phone = document.getElementById("phone");
+    phone.setAttribute("data-theme", theme);
+    document.body.classList.toggle("light", theme === "light");
+    document.documentElement.style.colorScheme = theme;
+    document.getElementById("themeColor").setAttribute("content", theme === "light" ? "#f7f8f7" : "#181818");
+    const btn = document.getElementById("appearanceBtn");
+    const nextIsLight = theme !== "light";
+    btn.setAttribute("aria-label", nextIsLight ? "Byt till ljust läge" : "Byt till mörkt läge");
+    btn.innerHTML = nextIsLight ? icon("sun", 16) + "<span>Ljust läge</span>" : icon("moon", 16) + "<span>Mörkt läge</span>";
+  }
+
+  function toggleAppearance() {
+    const theme = resolveTheme();
+    state.appearance = theme === "dark" ? "light" : "dark";
+    save();
+    applyTheme();
+  }
+
+  function mealsOn(day) {
+    const key = typeof day === "string" ? day : isoDay(day);
+    return state.meals.filter(function (m) { return m.date === key; });
+  }
+  function dayTotals(day) {
+    return mealsOn(day).reduce(function (s, m) {
+      return { calories: s.calories + m.calories, protein: s.protein + m.protein, carbs: s.carbs + m.carbs, fat: s.fat + m.fat };
+    }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
+  }
+  function latestWeight() {
+    return state.weights.slice().sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; })[0] || null;
+  }
+  function weightOn(day) {
+    const key = typeof day === "string" ? day : isoDay(day);
+    return state.weights.find(function (w) { return w.date === key; }) || null;
+  }
+
+  let toastTimer = null;
+  function toast(msg) {
+    const el = document.getElementById("toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove("show"); }, 2200);
+  }
+
+  function render() {
+    applyTheme();
+    const main = document.getElementById("main");
+    const views = { overview: renderOverview, history: renderHistory, settings: renderSettings, register: renderRegister, review: renderReview, weight: renderWeight };
+    const fn = views[state.view] || renderOverview;
+    main.innerHTML = fn();
+    const tab = (state.view === "register" || state.view === "review" || state.view === "weight") ? "overview" : state.view;
+    document.querySelectorAll("nav.tabs button").forEach(function (b) {
+      b.classList.toggle("active", b.getAttribute("data-tab") === tab);
+    });
+    bindViewEvents();
+    if (state.modal) renderModal();
+  }
+
+  function renderOverview() {
+    const today = isoDay(new Date());
+    const t = dayTotals(today);
+    const remaining = GOALS.calories - t.calories;
+    const over = t.calories > GOALS.calories;
+    const progress = Math.min(t.calories / Math.max(GOALS.calories, 1), 1);
+    const dash = (progress * CIRC).toFixed(1) + " " + CIRC.toFixed(1);
+    const mon = mondayOf(new Date());
+    const weekDays = [];
+    let weekTotal = 0;
+    for (let i = 0; i < 7; i++) {
+      const d = addDays(mon, i);
+      const cal = dayTotals(d).calories;
+      weekTotal += cal;
+      weekDays.push({ date: d, cal: cal, today: isoDay(d) === today });
+    }
+    const weekGoal = GOALS.calories * 7;
+    const weekLeft = weekGoal - weekTotal;
+    const scale = Math.max(GOALS.calories, Math.max.apply(null, weekDays.map(function (d) { return d.cal; })), 1);
+    const hasExample = mealsOn(today).some(function (m) { return m.example; });
+    const w = latestWeight();
+    const sparkPoints = state.weights.slice().sort(function (a, b) { return a.date < b.date ? -1 : 1; }).slice(-7);
+    const spark = sparkSVG(sparkPoints, 130, 35);
+    const stepPct = Math.min(EXAMPLE_STEPS / GOALS.steps, 1) * 100;
+    const stepLeft = Math.max(GOALS.steps - EXAMPLE_STEPS, 0);
+
+    let bars = "";
+    weekDays.forEach(function (d, i) {
+      const h = d.cal > 0 ? Math.max(3, Math.round((d.cal / scale) * 45)) : 3;
+      const color = d.today && d.cal > 0 ? "background:var(--kk-green)" : (d.cal > 0 ? "" : "");
+      bars += '<div class="bar-col"><div class="bar" style="height:' + h + "px;" + color + '"></div>' + WEEKDAYS_NARROW[i] + "</div>";
+    });
+
+    const macro = function (label, amount, goal, color) {
+      const pct = Math.min(Math.max(amount / Math.max(goal, 1), 0), 1) * 100;
+      return '<div><p class="macro-label">' + label + '</p><p class="macro-val">' + num(amount) + ' <span class="muted">/ ' + num(goal) + ' g</span></p><div class="track"><div class="fill" style="width:' + pct.toFixed(1) + "%;background:" + color + '"></div></div></div>';
+    };
+
+    return (
+      '<div class="row"><p class="muted">' + formatDateLong(new Date(), true) + '</p>' +
+        (hasExample ? '<span class="demo">Exempeldata</span>' : "") + "</div>" +
+      "<h1>Din översikt</h1>" +
+      '<section class="panel">' +
+        "<h2>Dagens mål</h2>" +
+        '<div class="ring">' +
+          '<svg viewBox="0 0 180 180" role="img" aria-label="' + num(t.calories) + " av " + num(GOALS.calories) + ' kilokalorier registrerade">' +
+            '<circle cx="90" cy="90" r="78" fill="none" stroke="var(--kk-line)" stroke-width="9"/>' +
+            '<circle cx="90" cy="90" r="78" fill="none" stroke="var(--kk-green)" stroke-width="9" stroke-dasharray="' + dash + '" stroke-linecap="round"/>' +
+          "</svg>" +
+          '<div class="ring-label"><span class="big">' + num(Math.abs(remaining)) + '</span><span class="muted">' + (over ? "kcal över målet" : "kcal kvar idag") + "</span></div>" +
+        "</div>" +
+        '<div class="totals"><div><b>' + num(t.calories) + '</b><span class="muted">Ätit</span></div><div><b>' + num(GOALS.calories) + '</b><span class="muted">Dagsmål</span></div></div>' +
+        '<div class="macros">' +
+          macro("Protein", t.protein, GOALS.protein, "var(--protein)") +
+          macro("Kolhydrater", t.carbs, GOALS.carbs, "var(--carbs)") +
+          macro("Fett", t.fat, GOALS.fat, "var(--fat)") +
+        "</div>" +
+      "</section>" +
+      '<section class="panel">' +
+        '<div class="row"><h2>Den här veckan</h2><span class="muted">v. ' + weekNumber(new Date()) + "</span></div>" +
+        '<p style="margin-top:10px">' + num(weekTotal) + ' <span class="muted">/ ' + num(weekGoal) + " kcal</span></p>" +
+        '<div class="bars" aria-label="Veckans registrerade kalorier per dag">' + bars + "</div>" +
+        '<p class="muted" style="margin-top:10px">' + (weekLeft < 0 ? num(Math.abs(weekLeft)) + " kcal över veckobudgeten" : num(weekLeft) + " kcal kvar i veckobudgeten") + "</p>" +
+      "</section>" +
+      '<div class="twocol">' +
+        '<button type="button" class="panel" id="openWeight">' +
+          "<h2>Vikt</h2>" +
+          '<div class="metric">' + (w ? dec(w.kilograms) : "–") + ' <small>kg</small></div>' +
+          '<p class="muted">Mål ' + num(GOALS.targetWeight) + " kg</p>" +
+          (w ? '<p class="muted" style="margin-top:4px">' + formatDateShort(w.date) + (w.example ? " · exempeldata" : "") + "</p>" : '<p class="muted" style="margin-top:4px">Ingen registrering ännu</p>') +
+          spark +
+        "</button>" +
+        '<section class="panel">' +
+          "<h2>Dagens steg</h2>" +
+          '<div class="metric">' + num(EXAMPLE_STEPS) + "</div>" +
+          '<p class="muted">av ' + num(GOALS.steps) + " steg</p>" +
+          '<div class="track" style="margin-top:20px"><div class="fill" style="width:' + stepPct.toFixed(1) + '%"></div></div>' +
+          '<p class="muted" style="margin-top:9px">' + num(stepLeft) + ' kvar · <span class="chip">exempeldata</span></p>' +
+        "</section>" +
+      "</div>" +
+      '<button type="button" class="primary" id="openRegister">' + icon("plus") + "Registrera</button>" +
+      '<p class="note">Webbdemo · måltider och vikt sparas i den här webbläsaren</p>' +
+      '<div class="spacer"></div>'
+    );
+  }
+
+  function sparkSVG(points, w, h) {
+    if (!points.length) return "";
+    const values = points.map(function (p) { return p.kilograms; });
+    const min = Math.min.apply(null, values) - 0.3;
+    const max = Math.max.apply(null, values) + 0.3;
+    const span = Math.max(max - min, 0.2);
+    const padX = 2;
+    const coords = points.map(function (p, i) {
+      const x = points.length === 1 ? w / 2 : padX + (i / (points.length - 1)) * (w - padX * 2);
+      const y = 3 + (1 - (p.kilograms - min) / span) * (h - 8);
+      return { x: x, y: y };
+    });
+    const d = coords.map(function (c, i) { return (i ? "L" : "M") + c.x.toFixed(1) + " " + c.y.toFixed(1); }).join(" ");
+    return '<svg class="spark" viewBox="0 0 ' + w + " " + h + '" role="img" aria-label="Vikttrend">' +
+      '<path d="' + d + '" fill="none" stroke="var(--kk-green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+      "</svg>";
+  }
+
+  function renderRegister() {
+    const draft = state.mealDraft;
+    const amounts = explicitAmounts(draft.text);
+    const checks = amounts.map(function (a) {
+      return '<div class="check-item">' + icon("checkCircle", 14) + "<span>" + escapeHtml(a) + "</span></div>";
+    }).join("");
+    const today = isToday(parseISODay(draft.date));
+    const mealBtns = KINDS.map(function (k) {
+      return '<button type="button" class="meal-btn' + (draft.kind === k ? " selected" : "") + '" data-kind="' + k + '">' +
+        escapeHtml(k) + (draft.kind === k ? icon("check", 14) : "") + "</button>";
+    }).join("");
+    const busy = state.aiBusy;
+    return (
+      '<button type="button" class="back" id="backOverview">' + icon("chevronLeft") + "Översikt</button>" +
+      "<h1>Registrera</h1>" +
+      '<section class="panel">' +
+        "<h2>Måltiden</h2>" +
+        '<p class="hint" style="margin-top:6px">Vad och hur mycket har du ätit eller druckit?</p>' +
+        '<textarea id="mealText" aria-label="Beskriv din måltid" placeholder="Till exempel: Bröd 2 skivor, totalt 80 g">' + escapeHtml(draft.text) + "</textarea>" +
+        '<p class="hint">Skriv g eller gram för vikt, och ml, cl eller dl för dryck. Det går också bra att bara skriva exempelvis kebabrulle — en normal portion uppskattas då.</p>' +
+        (checks ? '<div class="checks">' + checks + "</div>" : "") +
+        '<label>När?</label>' +
+        '<div class="date-nav">' +
+          '<button type="button" id="mealPrev" aria-label="Föregående måltidsdatum">' + icon("chevronLeft") + "</button>" +
+          '<div class="date-label" id="mealDateLabel">' + mealDateLabel(draft.date) + "</div>" +
+          '<button type="button" id="mealNext" aria-label="Nästa måltidsdatum"' + (today ? " disabled" : "") + ">" + icon("chevronRight") + "</button>" +
+        "</div>" +
+        '<div class="meal-grid">' + mealBtns + "</div>" +
+      "</section>" +
+      '<button type="button" class="primary" id="analyzeBtn"' + (busy || !draft.text.trim() ? " disabled" : "") + ' style="margin:6px 0 8px">' +
+        icon("sparkles") + (busy ? "Analyserar…" : "Analysera med AI") +
+      "</button>" +
+      (state.aiError ? '<p class="error">' + escapeHtml(state.aiError) + "</p>" : "") +
+      '<p class="note">Demo · tolkningen sker lokalt med en inbyggd livsmedelstabell, inte med GPT.</p>' +
+      '<div class="row subhead"><h2>Dina favoriter</h2></div>' +
+      '<section class="panel"><p class="muted">Här kommer dina sparade favoritmåltider att finnas.</p></section>' +
+      '<button type="button" class="primary" id="openWeightFromRegister" style="margin:16px 0 8px">Vikt</button>' +
+      '<div class="spacer"></div>'
+    );
+  }
+
+  function renderReview() {
+    const r = state.review;
+    if (!r) return renderRegister();
+    const items = r.items;
+    const tot = sumItems(items);
+    const rows = items.map(function (it) {
+      const t = itemTotals(it);
+      const source = it.quantitySource === "user" ? "✓ Angiven mängd" : "≈ Uppskattad mängd";
+      return '<div class="listrow" data-item="' + it.id + '">' +
+        '<div class="row"><span>' + escapeHtml(it.name) + "</span></div>" +
+        '<div class="amount-row" style="margin-top:8px">' +
+          '<label style="margin:0;flex:1">Mängd</label>' +
+          '<input type="text" inputmode="decimal" class="amount-input" data-id="' + it.id + '" value="' + escapeHtml(String(it.amount).replace(".", ",")) + '" aria-label="Mängd för ' + escapeHtml(it.name) + '" onfocus="this.select()">' +
+          "<span>" + escapeHtml(it.unit) + "</span>" +
+        "</div>" +
+        '<p class="muted" style="margin-top:6px">' + source + "</p>" +
+        '<p class="muted">' + escapeHtml(it.quantityExplanation) + "</p>" +
+        "<p style=\"margin-top:6px\">" + num(t.kcal) + " kcal · Protein " + dec(t.protein) + " g · Kolhydrater " + dec(t.carbs) + " g · Fett " + dec(t.fat) + " g</p>" +
+        '<p class="muted">' + escapeHtml(it.nutritionSource) + "</p>" +
+      "</div>";
+    }).join("");
+    return (
+      '<button type="button" class="back" id="backRegister">' + icon("chevronLeft") + "Registrera</button>" +
+      "<h1>Ser det rätt ut?</h1>" +
+      '<section class="panel">' +
+        '<p class="demo">Demo-tolkning</p>' +
+        '<h2 style="margin-top:12px">' + escapeHtml(r.kind) + " · " + formatDateLong(r.date, false) + "</h2>" +
+        '<p class="muted" style="margin-top:6px">' + escapeHtml(r.description) + "</p>" +
+        '<p class="hint">Kontrollera mängderna. Uppskattningarna är ungefärliga. Ändrar du mängden räknas näringsvärdena om.</p>' +
+        rows +
+        '<p class="review-total">Totalt: ' + num(tot.kcal) + " kcal</p>" +
+        '<p class="muted">Protein ' + dec(tot.protein) + " g · Kolhydrater " + dec(tot.carbs) + " g · Fett " + dec(tot.fat) + " g</p>" +
+      "</section>" +
+      '<button type="button" class="secondary" id="backRegister2" style="width:100%">Ändra</button>' +
+      '<button type="button" class="primary" id="confirmMeal" style="margin-top:12px">' + icon("check") + "Bekräfta och spara</button>" +
+      '<button type="button" class="back" id="cancelReview" style="margin:8px auto">Avbryt</button>' +
+      '<div class="spacer"></div>'
+    );
+  }
+
+  function renderWeight() {
+    const latest = latestWeight();
+    const mon = addDays(mondayOf(new Date()), state.weightWeekOffset * 7);
+    const sun = addDays(mon, 6);
+    const future = state.weightWeekOffset >= 0;
+    const weekWeights = state.weights.filter(function (w) { return w.date >= isoDay(mon) && w.date <= isoDay(sun); })
+      .sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+    const change = latest ? latest.kilograms - GOALS.startWeight : null;
+    const changeText = change == null ? "" : (change > 0 ? "+" : "−") + dec(Math.abs(change)) + " kg från start";
+    const avg = weekWeights.length ? weekWeights.reduce(function (s, w) { return s + w.kilograms; }, 0) / weekWeights.length : null;
+    const existing = weightOn(state.weightDate);
+    const today = isToday(parseISODay(state.weightDate));
+    const hasExample = weekWeights.some(function (w) { return w.example; }) || (latest && latest.example);
+    const val = parseNum(state.weightValue);
+    const valid = val != null && val > 0 && val <= 500 && !isFutureDay(parseISODay(state.weightDate));
+
+    return (
+      '<button type="button" class="back" id="backOverview">' + icon("chevronLeft") + "Översikt</button>" +
+      "<h1>Din vikt</h1>" +
+      '<section class="panel">' +
+        '<p class="muted">Senaste registrering' + (latest ? (isToday(parseISODay(latest.date)) ? " · idag" : " · " + formatDateShort(latest.date)) : "") + "</p>" +
+        '<div class="big" style="margin:12px 0">' + (latest ? dec(latest.kilograms) : "–") + ' <span style="font-size:18px;color:var(--kk-muted)">kg</span></div>' +
+        '<div class="row"><span class="muted">' + (changeText || "Ingen vikt ännu") + '</span><span class="muted">Mål ' + num(GOALS.targetWeight) + " kg</span></div>" +
+        (hasExample && latest && latest.example ? '<p class="demo" style="margin-top:10px">Exempeldata</p>' : "") +
+      "</section>" +
+      '<section class="panel">' +
+        '<div class="date-nav">' +
+          '<button type="button" id="weekPrev" aria-label="Föregående vecka">' + icon("chevronLeft") + "</button>" +
+          '<div class="date-label week-title">' + weekRangeLabel(mon) + "</div>" +
+          '<button type="button" id="weekNext" aria-label="Nästa vecka"' + (future ? " disabled" : "") + ">" + icon("chevronRight") + "</button>" +
+        "</div>" +
+        (weekWeights.length ? weightChartSVG(weekWeights, mon) +
+          '<div class="weekdays">' + WEEKDAYS_SHORT.map(function (d) { return "<span>" + d + "</span>"; }).join("") + "</div>" +
+          '<div class="row" style="margin-top:24px"><span class="muted">Veckans genomsnitt</span><span>' + dec(avg) + " kg</span></div>"
+          : '<p class="muted" style="min-height:140px;display:flex;align-items:center;justify-content:center">Inga viktregistreringar den här veckan.</p>') +
+      "</section>" +
+      '<section class="panel">' +
+        "<h2>Registrera din vikt</h2>" +
+        '<div class="date-nav">' +
+          '<button type="button" id="wPrev" aria-label="Föregående dag">' + icon("chevronLeft") + "</button>" +
+          '<div class="date-label">' + weightDateLabel(state.weightDate) + "</div>" +
+          '<button type="button" id="wNext" aria-label="Nästa dag"' + (today ? " disabled" : "") + ">" + icon("chevronRight") + "</button>" +
+        "</div>" +
+        '<div class="amount-row">' +
+          '<input type="text" inputmode="decimal" id="weightInput" placeholder="Vikt, till exempel 96,4" onfocus="this.select()" value="' + escapeHtml(state.weightValue) + '" aria-label="Vikt i kilogram">' +
+          '<span class="muted">kg</span>' +
+        "</div>" +
+        (existing ? '<p class="muted" style="margin-top:8px">Sparat denna dag: ' + dec(existing.kilograms) + " kg" + (existing.example ? " (exempeldata)" : "") + "</p>" : "") +
+        (state.weightError ? '<p class="error">' + escapeHtml(state.weightError) + "</p>" : "") +
+        (state.weightMessage ? '<p class="ok">' + escapeHtml(state.weightMessage) + "</p>" : "") +
+      "</section>" +
+      '<button type="button" class="primary" id="saveWeight"' + (valid ? "" : " disabled") + ">Registrera vikt</button>" +
+      '<p class="note">Webbdemo · vikter sparas i den här webbläsaren</p>' +
+      '<div class="spacer"></div>'
+    );
+  }
+
+  function weightChartSVG(points, mon) {
+    const w = 300, h = 160;
+    const values = points.map(function (p) { return p.kilograms; });
+    const min = Math.min.apply(null, values) - 0.5;
+    const max = Math.max.apply(null, values) + 0.5;
+    const span = Math.max(max - min, 0.2);
+    const left = 28, right = 10, top = 18, bottom = 20;
+    const xFor = function (dateStr) {
+      const d = parseISODay(dateStr);
+      const idx = Math.round((startOfDay(d) - startOfDay(mon)) / 86400000);
+      return left + (idx / 6) * (w - left - right);
+    };
+    const yFor = function (kg) {
+      return top + (1 - (kg - min) / span) * (h - top - bottom);
+    };
+    const mid = (min + max) / 2;
+    const gridY = [max, mid, min];
+    let grid = "";
+    gridY.forEach(function (g) {
+      const y = yFor(g);
+      grid += '<path d="M' + left + " " + y.toFixed(1) + " H" + (w - right) + '" stroke="var(--kk-line)" fill="none"/>';
+    });
+    const coords = points.map(function (p) { return { x: xFor(p.date), y: yFor(p.kilograms), kg: p.kilograms }; });
+    const path = coords.map(function (c, i) { return (i ? "L" : "M") + c.x.toFixed(1) + " " + c.y.toFixed(1); }).join(" ");
+    const dots = coords.map(function (c) {
+      return '<circle cx="' + c.x.toFixed(1) + '" cy="' + c.y.toFixed(1) + '" r="4" fill="var(--kk-green)"/>';
+    }).join("");
+    const labels = [
+      '<text x="0" y="14" fill="var(--kk-muted)" font-size="11">kg</text>',
+      '<text x="0" y="' + (yFor(max) + 4).toFixed(1) + '" fill="var(--kk-muted)" font-size="11">' + dec(max) + "</text>",
+      '<text x="0" y="' + (yFor(min) + 4).toFixed(1) + '" fill="var(--kk-muted)" font-size="11">' + dec(min) + "</text>"
+    ].join("");
+    const aria = points.map(function (p) { return formatDateShort(p.date) + " " + dec(p.kilograms) + " kg"; }).join(", ");
+    return '<svg class="weight-chart" viewBox="0 0 ' + w + " " + h + '" role="img" aria-label="Vikt: ' + aria + '">' +
+      grid + labels +
+      (coords.length > 1 ? '<path d="' + path + '" stroke="var(--kk-green)" stroke-width="3" fill="none" stroke-linejoin="round" stroke-linecap="round"/>' : "") +
+      dots +
+      "</svg>";
+  }
+
+  function renderHistory() {
+    const days = {};
+    state.meals.forEach(function (m) {
+      if (!days[m.date]) days[m.date] = [];
+      days[m.date].push(m);
+    });
+    const keys = Object.keys(days).sort().reverse();
+    if (!keys.length) {
+      return "<p class=\"muted\">Dina registreringar</p><h1>Historik</h1>" +
+        '<section class="panel"><p class="muted">Din historik börjar här. Registrera din första måltid för att följa kalorier och makron över tid.</p></section>' +
+        '<button type="button" class="primary" id="openRegister">Registrera måltid</button>';
+    }
+    const sections = keys.map(function (day) {
+      const list = days[day].slice();
+      const order = { Frukost: 1, Lunch: 2, Middag: 3, Mellanmål: 4 };
+      list.sort(function (a, b) { return (order[a.kind] || 9) - (order[b.kind] || 9); });
+      const total = list.reduce(function (s, m) { return s + m.calories; }, 0);
+      const hasEx = list.some(function (m) { return m.example; });
+      const rows = list.map(function (m) {
+        return '<div class="listrow">' +
+          '<div class="row"><span>' + escapeHtml(m.kind) + "</span><span>" + num(m.calories) + " kcal</span></div>" +
+          '<p class="muted" style="margin-top:6px">' + escapeHtml(m.name) + (m.example ? " · exempeldata" : "") + "</p>" +
+          '<p class="muted">Protein ' + num(m.protein) + " g · Kolhydrater " + num(m.carbs) + " g · Fett " + num(m.fat) + " g</p>" +
+        "</div>";
+      }).join("");
+      return '<section class="panel"><div class="row"><h2>' + formatHistoryDay(day) + "</h2><span>" + num(total) + " kcal</span></div>" +
+        (hasEx && list.every(function (m) { return m.example; }) ? "" : "") +
+        rows + "</section>";
+    }).join("");
+    return '<p class="muted">Dina registreringar</p><h1>Historik</h1>' + sections +
+      '<p class="note">Webbdemo · historiken sparas i den här webbläsaren</p><div class="spacer"></div>';
+  }
+
+
+  function formatGoalValue(field, value) {
+    return field.kind === "int" ? String(Math.round(value)) : dec(value);
+  }
+  function parseGoalInput(field, text) {
+    const v = parseNum(text);
+    if (v == null || v < field.min || v > field.max) return null;
+    return field.kind === "int" ? Math.round(v) : Math.round(v * 10) / 10;
+  }
+  function applyGoals(g) {
+    if (!g || typeof g !== "object") return;
+    GOAL_FIELDS.forEach(function (f) {
+      const parsed = parseGoalInput(f, String(g[f.key]));
+      if (parsed != null) GOALS[f.key] = parsed;
+    });
+  }
+  function flushGoalsFromDOM() {
+    const main = document.getElementById("main");
+    if (!main) return;
+    let changed = false;
+    main.querySelectorAll("[data-goal]").forEach(function (inp) {
+      const field = GOAL_FIELDS.find(function (f) { return f.key === inp.getAttribute("data-goal"); });
+      if (!field) return;
+      const v = parseGoalInput(field, inp.value);
+      if (v == null) {
+        inp.value = formatGoalValue(field, GOALS[field.key]);
+        return;
+      }
+      if (GOALS[field.key] !== v) {
+        GOALS[field.key] = v;
+        changed = true;
+      }
+      inp.value = formatGoalValue(field, v);
+    });
+    if (changed) save();
+  }
+  function settingsTabBar() {
+    return '<div class="segments" role="tablist" aria-label="Inställningsavsnitt">' +
+      SETTINGS_TABS.map(function (tab) {
+        const on = state.settingsTab === tab.id;
+        return '<button type="button" role="tab" id="settings-tab-' + tab.id + '" data-settings-tab="' + tab.id + '"' +
+          (on ? ' class="active" aria-selected="true"' : ' aria-selected="false"') +
+          ' aria-controls="settings-panel-' + tab.id + '">' + escapeHtml(tab.label) + "</button>";
+      }).join("") +
+      "</div>";
+  }
+  function renderSettingsGoals() {
+    const rows = GOAL_FIELDS.map(function (f) {
+      return '<div class="goal-row">' +
+        '<label class="goal-label" for="goal-' + f.key + '">' + escapeHtml(f.label) + "</label>" +
+        '<input type="text" inputmode="decimal" id="goal-' + f.key + '" data-goal="' + f.key + '" value="' +
+          escapeHtml(formatGoalValue(f, GOALS[f.key])) + '" aria-label="' + escapeHtml(f.label) + '" onfocus="this.select()">' +
+        '<span class="unit">' + escapeHtml(f.unit) + "</span>" +
+      "</div>";
+    }).join("");
+    return '<section class="panel" id="settings-panel-goals" role="tabpanel" aria-labelledby="settings-tab-goals">' +
+      "<h2>Dina mål</h2>" +
+      rows +
+      '<p class="hint">Ändringarna sparas automatiskt och används direkt i översikten, veckobudgeten och viktkorten.</p>' +
+    "</section>";
+  }
+  function renderSettingsApp() {
+    const theme = state.appearance;
+    const opt = function (value, label) {
+      return '<button type="button" class="meal-btn' + (theme === value ? " selected" : "") + '" data-appearance="' + value + '">' + label + (theme === value ? icon("check", 14) : "") + "</button>";
+    };
+    return (
+      '<div id="settings-panel-app" role="tabpanel" aria-labelledby="settings-tab-app">' +
+      '<section class="panel">' +
+        "<h2>Utseende</h2>" +
+        '<div class="meal-grid" style="margin-top:12px;grid-template-columns:1fr">' +
+          opt("system", "Följ telefonen") +
+          opt("light", "Ljust") +
+          opt("dark", "Mörkt") +
+        "</div>" +
+      "</section>" +
+      '<section class="panel">' +
+        "<h2>AI-anslutning</h2>" +
+        '<p class="hint">I den här webbdemon tolkas måltider lokalt med en inbyggd livsmedelstabell. Ingen anslutningskod behövs, och ingen data skickas till någon server.</p>' +
+        '<div class="listrow row"><span>Anslutning</span><span class="muted">Lokal demo</span></div>' +
+        '<p class="hint">En riktig AI-anslutning kan läggas till här senare.</p>' +
+      "</section>" +
+      '<section class="panel">' +
+        '<div class="listrow">Favoritmåltider<span class="muted" style="float:right">Kommer senare</span></div>' +
+        '<div class="listrow">Egna livsmedel<span class="muted" style="float:right">Kommer senare</span></div>' +
+        '<div class="listrow row"><span>Apple Hälsa</span><span class="muted">Inte anslutet</span></div>' +
+      "</section>" +
+      '<section class="panel">' +
+        "<h2>Om demon</h2>" +
+        '<p class="hint">Måltider, vikt och mål sparas lokalt i den här webbläsaren. Måltidstexten tolkas med en enkel regelbaserad modell och en inbyggd livsmedelstabell — ingen data skickas till någon server. Värdena är ungefärliga exempel, inte officiella näringsdata.</p>' +
+        '<button type="button" class="secondary" id="resetDemo" style="width:100%;margin-top:14px">Återställ exempeldata</button>' +
+      "</section>" +
+      "</div>"
+    );
+  }
+
+  const SETTINGS_TAB_VIEWS = {
+    goals: renderSettingsGoals,
+    app: renderSettingsApp
+  };
+  function renderSettings() {
+    if (!SETTINGS_TABS.some(function (t) { return t.id === state.settingsTab; })) {
+      state.settingsTab = SETTINGS_TABS[0].id;
+    }
+    const view = SETTINGS_TAB_VIEWS[state.settingsTab] || renderSettingsGoals;
+    return (
+      '<p class="settings-intro muted">Gör Hälsokollen till din</p>' +
+      "<h1>Inställningar</h1>" +
+      settingsTabBar() +
+      view() +
+      '<p class="note">Webbdemo av Hälsokollen</p><div class="spacer"></div>'
+    );
+  }
+
+  function renderModal() {
+    const m = state.modal;
+    if (!m) return;
+    const backdrop = document.createElement("div");
+    backdrop.className = "modal-backdrop";
+    backdrop.innerHTML = '<div class="modal" role="dialog" aria-modal="true"><h2>' + escapeHtml(m.title) + '</h2><p class="muted">' + escapeHtml(m.body) + "</p>" +
+      (m.confirm ? '<button type="button" class="primary" id="modalOk" style="margin:0 0 8px">' + escapeHtml(m.confirm) + "</button>" : "") +
+      '<button type="button" class="secondary" id="modalCancel" style="width:100%">' + escapeHtml(m.cancel || "Avbryt") + "</button></div>";
+    document.getElementById("phone").appendChild(backdrop);
+    document.getElementById("modalCancel").addEventListener("click", function () {
+      state.modal = null;
+      backdrop.remove();
+    });
+    if (m.confirm) {
+      document.getElementById("modalOk").addEventListener("click", function () {
+        const fn = m.onConfirm;
+        state.modal = null;
+        backdrop.remove();
+        if (fn) fn();
+      });
+    }
+  }
+
+  function go(view) {
+    flushGoalsFromDOM();
+    state.view = view;
+    if (view === "register") {
+      state.aiError = null;
+      state.aiBusy = false;
+    }
+    if (view === "weight") {
+      const existing = weightOn(state.weightDate);
+      if (existing && !state.weightValue) state.weightValue = dec(existing.kilograms);
+      if (!state.weightValue) {
+        const latest = latestWeight();
+        if (isToday(parseISODay(state.weightDate)) && latest && latest.date === state.weightDate) {
+          state.weightValue = dec(latest.kilograms);
+        }
+      }
+      state.weightMessage = null;
+      state.weightError = null;
+    }
+    render();
+    document.getElementById("main").scrollTop = 0;
+  }
+
+  function bindViewEvents() {
+    const main = document.getElementById("main");
+    const click = function (id, fn) {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener("click", fn);
+    };
+    click("openRegister", function () {
+      state.mealDraft.kind = suggestedKind(new Date());
+      state.mealDraft.date = isoDay(new Date());
+      go("register");
+    });
+    click("openWeight", function () { go("weight"); });
+    click("openWeightFromRegister", function () { go("weight"); });
+    click("backOverview", function () { go("overview"); });
+    click("backRegister", function () { go("register"); });
+    click("backRegister2", function () { go("register"); });
+    click("cancelReview", function () { state.review = null; go("overview"); });
+
+    const mealText = document.getElementById("mealText");
+    if (mealText) {
+      mealText.addEventListener("input", function () {
+        state.mealDraft.text = mealText.value;
+        state.aiError = null;
+        const amounts = explicitAmounts(mealText.value);
+        let box = main.querySelector(".checks");
+        if (amounts.length) {
+          const html = amounts.map(function (a) {
+            return '<div class="check-item">' + icon("checkCircle", 14) + "<span>" + escapeHtml(a) + "</span></div>";
+          }).join("");
+          if (!box) {
+            box = document.createElement("div");
+            box.className = "checks";
+            mealText.nextElementSibling.insertAdjacentElement("afterend", box);
+          }
+          box.innerHTML = html;
+        } else if (box) {
+          box.remove();
+        }
+        const btn = document.getElementById("analyzeBtn");
+        if (btn && !state.aiBusy) btn.disabled = !mealText.value.trim();
+      });
+    }
+
+    main.querySelectorAll("[data-kind]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        state.mealDraft.kind = b.getAttribute("data-kind");
+        render();
+        const t = document.getElementById("mealText");
+        if (t) { const v = t.value; t.focus(); t.setSelectionRange(v.length, v.length); }
+      });
+    });
+
+    click("mealPrev", function () {
+      state.mealDraft.date = isoDay(addDays(parseISODay(state.mealDraft.date), -1));
+      render();
+    });
+    click("mealNext", function () {
+      const next = addDays(parseISODay(state.mealDraft.date), 1);
+      if (!isFutureDay(next)) {
+        state.mealDraft.date = isoDay(next);
+        render();
+      }
+    });
+
+    click("analyzeBtn", function () { analyzeDraft(); });
+
+    main.querySelectorAll(".amount-input").forEach(function (inp) {
+      inp.addEventListener("input", function () {
+        const id = inp.getAttribute("data-id");
+        const item = state.review && state.review.items.find(function (it) { return it.id === id; });
+        if (!item) return;
+        const v = parseNum(inp.value);
+        if (v == null || v <= 0) return;
+        item.amount = v;
+        item.quantitySource = "user";
+        item.quantityExplanation = "Mängden ändrad i granskningen.";
+        const tot = sumItems(state.review.items);
+        const row = inp.closest(".listrow");
+        const t = itemTotals(item);
+        const lines = row.querySelectorAll("p");
+        if (lines[0]) lines[0].textContent = "✓ Angiven mängd";
+        if (lines[1]) lines[1].textContent = item.quantityExplanation;
+        if (lines[2]) lines[2].textContent = num(t.kcal) + " kcal · Protein " + dec(t.protein) + " g · Kolhydrater " + dec(t.carbs) + " g · Fett " + dec(t.fat) + " g";
+        const totalEl = main.querySelector(".review-total");
+        if (totalEl) totalEl.textContent = "Totalt: " + num(tot.kcal) + " kcal";
+        const macroEl = totalEl && totalEl.nextElementSibling;
+        if (macroEl) macroEl.textContent = "Protein " + dec(tot.protein) + " g · Kolhydrater " + dec(tot.carbs) + " g · Fett " + dec(tot.fat) + " g";
+      });
+    });
+
+    click("confirmMeal", function () { confirmMeal(); });
+
+    click("weekPrev", function () { state.weightWeekOffset -= 1; render(); });
+    click("weekNext", function () {
+      if (state.weightWeekOffset < 0) { state.weightWeekOffset += 1; render(); }
+    });
+    click("wPrev", function () {
+      state.weightDate = isoDay(addDays(parseISODay(state.weightDate), -1));
+      const ex = weightOn(state.weightDate);
+      state.weightValue = ex ? dec(ex.kilograms) : "";
+      state.weightMessage = null;
+      state.weightError = null;
+      render();
+    });
+    click("wNext", function () {
+      const next = addDays(parseISODay(state.weightDate), 1);
+      if (!isFutureDay(next)) {
+        state.weightDate = isoDay(next);
+        const ex = weightOn(state.weightDate);
+        state.weightValue = ex ? dec(ex.kilograms) : "";
+        state.weightMessage = null;
+        state.weightError = null;
+        render();
+      }
+    });
+    const weightInput = document.getElementById("weightInput");
+    if (weightInput) {
+      weightInput.addEventListener("input", function () {
+        state.weightValue = weightInput.value;
+        const val = parseNum(state.weightValue);
+        const valid = val != null && val > 0 && val <= 500 && !isFutureDay(parseISODay(state.weightDate));
+        const btn = document.getElementById("saveWeight");
+        if (btn) btn.disabled = !valid;
+      });
+    }
+    click("saveWeight", function () { saveWeight(); });
+
+    main.querySelectorAll("[data-settings-tab]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        const id = b.getAttribute("data-settings-tab");
+        if (!id || id === state.settingsTab) return;
+        flushGoalsFromDOM();
+        state.settingsTab = id;
+        render();
+        document.getElementById("main").scrollTop = 0;
+      });
+    });
+    main.querySelectorAll("[data-goal]").forEach(function (inp) {
+      inp.addEventListener("blur", function () { flushGoalsFromDOM(); });
+      inp.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { e.preventDefault(); inp.blur(); }
+      });
+    });
+    main.querySelectorAll("[data-appearance]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        state.appearance = b.getAttribute("data-appearance");
+        save();
+        render();
+      });
+    });
+    click("resetDemo", function () {
+      state.modal = {
+        title: "Återställ exempeldata?",
+        body: "Dina egna registreringar i den här webbläsaren tas bort och exempeldatan läggs tillbaka.",
+        confirm: "Återställ",
+        cancel: "Avbryt",
+        onConfirm: function () {
+          const ex = exampleData();
+          state.meals = ex.meals;
+          state.weights = ex.weights;
+          save();
+          toast("Exempeldata återställd");
+          go("overview");
+        }
+      };
+      renderModal();
+    });
+  }
+
+  function analyzeDraft() {
+    const text = state.mealDraft.text.trim();
+    if (!text || state.aiBusy) return;
+    state.aiBusy = true;
+    state.aiError = null;
+    render();
+    window.setTimeout(function () {
+      const result = parseMealText(text);
+      state.aiBusy = false;
+      if (result.error) {
+        state.aiError = result.error;
+        render();
+        return;
+      }
+      state.review = {
+        description: text,
+        date: state.mealDraft.date,
+        kind: state.mealDraft.kind,
+        items: result.items,
+        warning: result.warning || null
+      };
+      if (result.warning) state.aiError = result.warning;
+      go("review");
+    }, 700);
+  }
+
+  function confirmMeal() {
+    if (!state.review || !state.review.items.length) return;
+    const items = state.review.items;
+    for (let i = 0; i < items.length; i++) {
+      if (!(items[i].amount > 0)) {
+        toast("Kontrollera mängderna");
+        return;
+      }
+    }
+    const tot = sumItems(items);
+    const names = items.map(function (it) { return it.name; });
+    let name = state.review.description.trim();
+    if (name.length > 60) name = names.join(", ");
+    state.meals.push({
+      id: uid(),
+      name: name,
+      date: state.review.date,
+      kind: state.review.kind,
+      calories: Math.round(tot.kcal * 10) / 10,
+      protein: Math.round(tot.protein * 10) / 10,
+      carbs: Math.round(tot.carbs * 10) / 10,
+      fat: Math.round(tot.fat * 10) / 10,
+      example: false
+    });
+    save();
+    state.review = null;
+    state.mealDraft.text = "";
+    state.mealDraft.date = isoDay(new Date());
+    state.mealDraft.kind = suggestedKind(new Date());
+    toast("Måltiden är sparad");
+    go("overview");
+  }
+
+  function saveWeight() {
+    const val = parseNum(state.weightValue);
+    if (val == null || val <= 0 || val > 500) {
+      state.weightError = "Ange en vikt mellan 0 och 500 kg.";
+      render();
+      return;
+    }
+    if (isFutureDay(parseISODay(state.weightDate))) return;
+    const existing = weightOn(state.weightDate);
+    const doSave = function () {
+      if (existing) {
+        existing.kilograms = val;
+        existing.example = false;
+      } else {
+        state.weights.push({ id: uid(), date: state.weightDate, kilograms: val, example: false });
+      }
+      save();
+      state.weightError = null;
+      state.weightMessage = dec(val) + " kg sparat för " + formatDateLong(state.weightDate, false) + ".";
+      toast("Vikten är sparad");
+      render();
+    };
+    if (existing) {
+      state.modal = {
+        title: "Vikt finns redan för detta datum. Uppdatera den?",
+        body: "Sparat denna dag: " + dec(existing.kilograms) + " kg.",
+        confirm: "Uppdatera",
+        cancel: "Avbryt",
+        onConfirm: doSave
+      };
+      renderModal();
+    } else {
+      doSave();
+    }
+  }
+
+  /* Word-boundary food match so short keys like "te" or "fil" not hit inside other words. */
+  function findFood(text) {
+    const t = text.toLowerCase();
+    let best = null, bestLen = 0;
+    for (let i = 0; i < FOODS.length; i++) {
+      const f = FOODS[i];
+      for (let k = 0; k < f.keys.length; k++) {
+        const key = f.keys[k];
+        const re = new RegExp("(?<![\\p{L}\\d])" + key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?![\\p{L}\\d])", "iu");
+        if (key.length > bestLen && re.test(t)) {
+          best = f;
+          bestLen = key.length;
+        }
+      }
+    }
+    return best;
+  }
+
+  function setupTabs() {
+    document.querySelector("#tab-overview").innerHTML = icon("dashboard", 20) + "Översikt";
+    document.querySelector("#tab-history").innerHTML = icon("clock", 20) + "Historik";
+    document.querySelector("#tab-settings").innerHTML = icon("sliders", 20) + "Inställningar";
+    document.querySelectorAll("nav.tabs button").forEach(function (b) {
+      b.addEventListener("click", function () {
+        const tab = b.getAttribute("data-tab");
+        go(tab);
+      });
+    });
+    document.getElementById("appearanceBtn").addEventListener("click", function () {
+      toggleAppearance();
+    });
+    window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", function () {
+      if (state.appearance === "system") applyTheme();
+    });
+  }
+
+  function init() {
+    const loaded = load();
+    if (!loaded) {
+      const ex = exampleData();
+      state.meals = ex.meals;
+      state.weights = ex.weights;
+      state.seeded = true;
+      save();
+    }
+    const existingToday = weightOn(isoDay(new Date()));
+    state.weightValue = existingToday ? dec(existingToday.kilograms) : "";
+    setupTabs();
+    applyTheme();
+    render();
+  }
+
+  init();
+})();
+  </script>
+</body>
+</html>
