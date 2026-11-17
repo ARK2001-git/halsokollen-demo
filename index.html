@@ -293,7 +293,7 @@
     }
     .or { display: flex; align-items: center; gap: 10px; color: var(--kk-muted); margin: 2px 0 8px; font-size: 14px; }
     .or i { flex: 1; height: 1px; background: var(--kk-line); }
-    textarea.short-text { min-height: 72px; }
+    textarea.meal-text { min-height: 112px; }
     .stated {
       display: flex; align-items: center; gap: 8px;
       background: rgba(50, 132, 94, 0.16); color: var(--kk-text);
@@ -579,7 +579,12 @@
   /* Livsmedelstabell: ungefärliga värden per 100 g eller 100 ml. Endast för demon. */
   const FOODS = [
     { keys: ["kebabrulle", "kebabtallrik", "kebab"], name: "Kebabrulle", kcal: 230, p: 11, c: 22, f: 11, def: 350, u: "g" },
-    { keys: ["kycklingfilé", "kycklingfile", "kyckling"], name: "Kycklingfilé, tillagad", kcal: 165, p: 31, c: 0, f: 3.6, def: 150, u: "g" },
+    { keys: ["kycklingfiléer", "kycklingfileer", "kycklingfilé", "kycklingfile", "kyckling"], name: "Kycklingfilé, tillagad", kcal: 165, p: 31, c: 0, f: 3.6, def: 150, u: "g", piece: 150 },
+    { keys: ["chili con carne", "chili con karne"], name: "Chili con carne", kcal: 140, p: 10, c: 9, f: 7, def: 350, u: "g" },
+    { keys: ["lasagne"], name: "Lasagne", kcal: 162, p: 9, c: 14, f: 8, def: 350, u: "g" },
+    { keys: ["pyttipanna", "pytt i panna"], name: "Pyttipanna", kcal: 145, p: 7, c: 12, f: 7, def: 350, u: "g" },
+    { keys: ["dressing"], name: "Dressing", kcal: 320, p: 1, c: 6, f: 32, def: 20, u: "g" },
+    { keys: ["sås", "sas"], name: "Sås", kcal: 90, p: 1, c: 6, f: 7, def: 30, u: "g" },
     { keys: ["kokt ris", "ris"], name: "Ris, kokt", kcal: 130, p: 2.7, c: 28, f: 0.3, def: 200, u: "g" },
     { keys: ["yoghurtsås", "yoghurtsas", "yoghurtsoas"], name: "Yoghurtsås", kcal: 120, p: 3, c: 5, f: 10, def: 50, u: "g" },
     { keys: ["kvarg", "keso", "cottage cheese"], name: "Kvarg", kcal: 59, p: 10, c: 3.5, f: 0.4, def: 200, u: "g" },
@@ -691,6 +696,11 @@
         cleaned.push(p);
       }
     }
+    const amounts = explicitAmounts(raw);
+    if (amounts.length === 1 && cleaned.length > 1) {
+      const shared = distributeTotal(cleaned, amounts[0]);
+      if (shared) return { items: shared, warning: null };
+    }
     const items = [];
     const unknown = [];
     cleaned.forEach(function (part) {
@@ -702,6 +712,36 @@
       return { items: [], error: "Jag kände inte igen något livsmedel. Prova till exempel kebabrulle eller bröd 80 g." };
     }
     return { items: items, warning: unknown.length ? "Kunde inte tolka: " + unknown.join(", ") : null };
+  }
+
+  function distributeTotal(parts, amountText) {
+    const bits = amountText.split(" ");
+    const total = parseNum(bits[0]);
+    const token = bits[1];
+    if (total == null || !token) return null;
+    const asMl = token !== "g";
+    const totalQty = asMl ? toMl(total, token) : total;
+    const foods = [];
+    for (let i = 0; i < parts.length; i++) {
+      const food = findFood(parts[i]);
+      if (!food || (food.u === "ml") !== asMl) return null;
+      foods.push(food);
+    }
+    const weights = foods.map(function (food) { return food.def || 100; });
+    const sum = weights.reduce(function (a, b) { return a + b; }, 0);
+    return foods.map(function (food, i) {
+      const share = Math.max(1, Math.round(totalQty * weights[i] / sum));
+      return {
+        id: uid(),
+        name: food.name,
+        amount: share,
+        unit: asMl ? "ml" : "g",
+        per100: { kcal: food.kcal, protein: food.p, carbs: food.c, fat: food.f },
+        quantitySource: "estimated",
+        quantityExplanation: "Totalen " + amountText + " fördelades uppskattat. Den här delen är cirka " + share.toLocaleString("sv-SE") + " " + (asMl ? "ml" : "g") + ".",
+        nutritionSource: "Inbyggd livsmedelstabell (demo)"
+      };
+    });
   }
 
   function unitFromToken(t) {
@@ -723,6 +763,7 @@
 
     const totalM = part.match(/(?:totalt|totalt sett)\s+(\d+(?:[.,]\d+)?)\s*(milliliter|centiliter|deciliter|gram|ml|cl|dl|g)\b/i);
     const perM = part.match(/(\d+(?:[.,]\d+)?)\s*(milliliter|centiliter|deciliter|gram|ml|cl|dl|g)\s+per\s+(skiva|skivor|glas|st|bit|bitar|portion|portioner)\b/i);
+    const household = part.match(/(\d+(?:[.,]\d+)?)\s+\S*?(matskedar|matsked|teskedar|tesked|filéer|fileer|filé|file|skedar|sked|msk)\b/iu);
     const countM = part.match(/(\d+(?:[.,]\d+)?)\s*(skivor|skiva|glas|klick|nävar|näve|portioner|portion|bitar|bit|\bst\b)/i);
     const unitM = part.match(/(\d+(?:[.,]\d+)?)\s*(milliliter|centiliter|deciliter|gram|ml|cl|dl|g)\b/i);
     const klick = /klick/i.test(part);
@@ -751,6 +792,14 @@
       else { unit = "ml"; amount = toMl(amount, u); }
       source = "user";
       explanation = "Angiven mängd: " + String(unitM[1]).replace(".", ",") + " " + u + ".";
+    } else if (household) {
+      const count = parseNum(household[1]);
+      const word = household[2].toLowerCase();
+      const each = word.indexOf("tesked") === 0 ? 5 : (word.indexOf("sked") >= 0 || word === "msk" ? 15 : (food.piece || 150));
+      amount = count * each;
+      unit = food.u === "ml" ? "ml" : "g";
+      source = "estimated";
+      explanation = "Uppskattat " + count.toLocaleString("sv-SE") + " " + word + " à " + dec(each, 0) + " " + unit + ".";
     } else if (countM) {
       const count = parseNum(countM[1]);
       const piece = food.piece || food.def;
@@ -823,7 +872,7 @@
     appearance: "dark", // dark | light | system
     meals: [],
     weights: [],
-    mealDraft: { text: "", date: isoDay(new Date()), kind: suggestedKind(new Date()), step: "start", name: "", amount: "", unit: "g", stated: null, source: "text", note: "" },
+    mealDraft: { text: "", date: isoDay(new Date()), kind: suggestedKind(new Date()), step: "start", extra: "", scans: [] },
     weightReturn: null,
     review: null,
     weightDate: isoDay(new Date()),
@@ -949,12 +998,8 @@
       date: isoDay(new Date()),
       kind: suggestedKind(new Date()),
       step: "start",
-      name: "",
-      amount: "",
-      unit: "g",
-      stated: null,
-      source: "text",
-      note: ""
+      extra: "",
+      scans: []
     };
   }
 
@@ -1018,14 +1063,12 @@
   }
 
   function hittaExempelprodukt() {
-    state.mealDraft.source = "barcode";
-    state.mealDraft.name = "Kycklingfilé, tillagad";
-    state.mealDraft.text = "";
-    state.mealDraft.stated = null;
-    state.mealDraft.amount = "";
-    state.mealDraft.unit = "g";
-    state.mealDraft.note = "Exempelträff · EAN 7310865004701. Näringsvärden per 100 g används i tolkningen.";
-    state.mealDraft.step = "amount";
+    if (!state.mealDraft.scans) state.mealDraft.scans = [];
+    state.mealDraft.scans.push({
+      name: "Kycklingfilé, tillagad",
+      note: "Exempelträff · EAN 7310865004701. Mängden sätts i granskningen."
+    });
+    state.mealDraft.step = "samla";
     state.aiError = null;
     render();
   }
@@ -1160,7 +1203,7 @@
   function renderRegister() {
     const draft = state.mealDraft;
     if (draft.step === "scan") return renderScan();
-    if (draft.step === "amount") return renderAmount();
+    if (draft.step === "samla") return renderSamla();
     const today = isToday(parseISODay(draft.date));
     const mealBtns = KINDS.map(function (k) {
       return '<button type="button" class="meal-btn' + (draft.kind === k ? " selected" : "") + '" data-kind="' + k + '">' +
@@ -1168,16 +1211,10 @@
     }).join("");
     return (
       '<button type="button" class="back" id="backOverview">' + icon("chevronLeft") + "Översikt</button>" +
-      '<p class="muted">Steg 1 av 3</p>' +
       "<h1>Vad har du ätit?</h1>" +
-      '<p class="hint">Skanna en streckkod eller skriv fritt. Mängden anger du i nästa steg.</p>' +
-      '<button type="button" class="primary" id="openScan">' + icon("camera") + "Skanna streckkod</button>" +
-      '<p class="hint">I demon simuleras kameran. På iPhone används VisionKit.</p>' +
-      '<div class="or" aria-hidden="true"><i></i><span>eller</span><i></i></div>' +
+      '<p class="hint">Skriv fritt så tolkas texten direkt. Skanna om du vill lägga till en vara och sedan mer.</p>' +
       '<section class="panel">' +
-        "<h2>Skriv vad du ätit</h2>" +
-        '<textarea id="mealText" class="short-text" aria-label="Vad du ätit" placeholder="Till exempel: 150 g kycklingfilé">' + escapeHtml(draft.text) + "</textarea>" +
-        '<p class="hint">Om texten redan innehåller mängd fylls den i och markeras med en bock.</p>' +
+        '<textarea id="mealText" class="meal-text" aria-label="Vad du ätit" placeholder="2 kycklingfiléer och 4 skedar ris">' + escapeHtml(draft.text) + "</textarea>" +
         '<label>När?</label>' +
         '<div class="date-nav">' +
           '<button type="button" id="mealPrev" aria-label="Föregående måltidsdatum">' + icon("chevronLeft") + "</button>" +
@@ -1186,7 +1223,11 @@
         "</div>" +
         '<div class="meal-grid">' + mealBtns + "</div>" +
       "</section>" +
-      '<button type="button" class="primary" id="continueText"' + (draft.text.trim() ? "" : " disabled") + ">Fortsätt</button>" +
+      '<button type="button" class="primary" id="analyzeBtn"' + (draft.text.trim() && !state.aiBusy ? "" : " disabled") + ">" +
+        icon("sparkles") + (state.aiBusy ? "Tolkar…" : "Tolka med AI") + "</button>" +
+      '<div class="or" aria-hidden="true"><i></i><span>eller</span><i></i></div>' +
+      '<button type="button" class="primary" id="openScan">' + icon("camera") + "Skanna streckkod</button>" +
+      '<p class="hint">I demon simuleras kameran. På iPhone används VisionKit. Mängden justeras i granskningen.</p>' +
       '<button type="button" class="primary" id="openWeightFromRegister">Vikt</button>' +
       '<p class="note">Inget sparas förrän du godkänner.</p>' +
       '<div class="spacer"></div>'
@@ -1199,7 +1240,28 @@
       "<h1>Skanna streckkod</h1>" +
       '<div class="finder">Rikta rutan mot streckkoden.<br>Kameran är simulerad i demon.</div>' +
       '<button type="button" class="primary" id="simScan">' + icon("camera") + "Hitta exempelprodukt</button>" +
-      '<p class="note">Exempelträffen är kycklingfilé. Sedan anger du mängd, precis som efter en riktig skanning.</p>'
+      '<p class="note">Exempelträffen läggs i måltiden. Du kan skanna fler eller skriva till exempel ris innan granskningen.</p>'
+    );
+  }
+
+  function renderSamla() {
+    const draft = state.mealDraft;
+    const scans = draft.scans || [];
+    const rows = scans.map(function (item) {
+      return '<div class="listrow"><div class="row"><span>' + escapeHtml(item.name) + '</span></div><p class="muted" style="margin-top:6px">' + escapeHtml(item.note || "") + "</p></div>";
+    }).join("");
+    const ready = ((scans.length > 0) || (draft.extra || "").trim()) && !state.aiBusy;
+    return (
+      '<button type="button" class="back" id="backToStart">' + icon("chevronLeft") + "Tillbaka</button>" +
+      "<h1>Lägg till i måltiden</h1>" +
+      '<p class="hint">Skanna nästa vara eller skriv något mer. Mängden för varje rad sätts i granskningen.</p>' +
+      '<section class="panel">' + (rows || '<p class="muted">Ingen vara ännu.</p>') + "</section>" +
+      '<textarea id="scanExtra" class="meal-text" aria-label="Lägg till mer" placeholder="Till exempel ris">' + escapeHtml(draft.extra || "") + "</textarea>" +
+      '<button type="button" class="primary" id="openScan">' + icon("camera") + "Skanna nästa</button>" +
+      '<button type="button" class="primary" id="analyzeBtn"' + (ready ? "" : " disabled") + ">" +
+        icon("sparkles") + (state.aiBusy ? "Tolkar…" : "Tolka med AI") + "</button>" +
+      (state.aiError ? '<p class="error">' + escapeHtml(state.aiError) + "</p>" : "") +
+      '<p class="note">Demo · tolkningen sker lokalt med en inbyggd livsmedelstabell, inte med GPT.</p>'
     );
   }
 
@@ -1247,10 +1309,11 @@
     const rows = items.map(function (it) {
       const t = itemTotals(it);
       const source = it.quantitySource === "user" ? "✓ Angiven mängd" : "≈ Uppskattad mängd";
+      const unitLabel = it.unit === "ml" ? "Mängd (ml)" : "Mängd (g)";
       return '<div class="listrow" data-item="' + it.id + '">' +
-        '<div class="row"><span>' + escapeHtml(it.name) + "</span></div>" +
+        '<div class="row"><span>' + escapeHtml(it.name) + '</span><button type="button" class="secondary" data-remove="' + it.id + '">Ta bort</button></div>' +
         '<div class="amount-row" style="margin-top:8px">' +
-          '<label style="margin:0;flex:1">Mängd</label>' +
+          '<label style="margin:0;flex:1">' + unitLabel + "</label>" +
           '<input type="text" inputmode="decimal" class="amount-input" data-id="' + it.id + '" value="' + escapeHtml(String(it.amount).replace(".", ",")) + '" aria-label="Mängd för ' + escapeHtml(it.name) + '" onfocus="this.select()">' +
           "<span>" + escapeHtml(it.unit) + "</span>" +
         "</div>" +
@@ -1261,18 +1324,20 @@
       "</div>";
     }).join("");
     return (
-      '<button type="button" class="back" id="backRegister">' + icon("chevronLeft") + "Mängd</button>" +
+      '<button type="button" class="back" id="backRegister">' + icon("chevronLeft") + "Tillbaka</button>" +
       "<h1>Ser det rätt ut?</h1>" +
       '<section class="panel">' +
         '<p class="demo">Demo-tolkning</p>' +
         '<h2 style="margin-top:12px">' + escapeHtml(r.kind) + " · " + formatDateLong(r.date, false) + "</h2>" +
         '<p class="muted" style="margin-top:6px">' + escapeHtml(r.description) + "</p>" +
-        '<p class="hint">Kontrollera mängderna. Uppskattningarna är ungefärliga. Ändrar du mängden räknas näringsvärdena om.</p>' +
+        '<p class="hint">Justera mängden. Näringsvärdena räknas om. Uppskattade mängder är märkta.</p>' +
         rows +
+        '<label for="addRowText">Lägg till rad</label>' +
+        '<input id="addRowText" type="text" placeholder="Till exempel sås" aria-label="Nytt livsmedel">' +
+        '<button type="button" class="secondary" id="addRow" style="width:100%;margin-top:8px">Lägg till</button>' +
         '<p class="review-total">Totalt: ' + num(tot.kcal) + " kcal</p>" +
         '<p class="muted">Protein ' + dec(tot.protein) + " g · Kolhydrater " + dec(tot.carbs) + " g · Fett " + dec(tot.fat) + " g</p>" +
       "</section>" +
-      '<button type="button" class="secondary" id="backRegister2" style="width:100%">Ändra</button>' +
       '<button type="button" class="primary" id="confirmMeal" style="margin-top:12px">' + icon("check") + "Godkänn</button>" +
       '<button type="button" class="back" id="cancelReview" style="margin:8px auto">Avbryt</button>' +
       '<div class="spacer"></div>'
@@ -1588,10 +1653,19 @@
       state.weightReturn = null;
       go("overview");
     });
-    click("backRegister", function () { state.mealDraft.step = "amount"; go("register"); });
-    click("backRegister2", function () { state.mealDraft.step = "amount"; go("register"); });
+    click("backRegister", function () {
+      state.mealDraft.step = (state.mealDraft.scans || []).length ? "samla" : "start";
+      go("register");
+    });
+    click("backRegister2", function () {
+      state.mealDraft.step = (state.mealDraft.scans || []).length ? "samla" : "start";
+      go("register");
+    });
     click("openScan", function () { state.mealDraft.step = "scan"; render(); });
-    click("closeScan", function () { state.mealDraft.step = "start"; render(); });
+    click("closeScan", function () {
+      state.mealDraft.step = (state.mealDraft.scans || []).length ? "samla" : "start";
+      render();
+    });
     click("simScan", hittaExempelprodukt);
     click("continueText", continueFromText);
     click("backToStart", function () { state.mealDraft.step = "start"; state.aiError = null; render(); });
@@ -1602,8 +1676,8 @@
       mealText.addEventListener("input", function () {
         state.mealDraft.text = mealText.value;
         state.aiError = null;
-        const btn = document.getElementById("continueText");
-        if (btn) btn.disabled = !mealText.value.trim();
+        const btn = document.getElementById("analyzeBtn");
+        if (btn && !state.aiBusy) btn.disabled = !mealText.value.trim();
       });
     }
 
@@ -1642,6 +1716,34 @@
         state.mealDraft.amount = chipLabel(Number(b.getAttribute("data-chip")));
         render();
       });
+    });
+    const scanExtra = document.getElementById("scanExtra");
+    if (scanExtra) {
+      scanExtra.addEventListener("input", function () {
+        state.mealDraft.extra = scanExtra.value;
+        const btn = document.getElementById("analyzeBtn");
+        const ready = (state.mealDraft.scans || []).length > 0 || scanExtra.value.trim();
+        if (btn && !state.aiBusy) btn.disabled = !ready;
+      });
+    }
+    main.querySelectorAll("[data-remove]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        if (!state.review) return;
+        state.review.items = state.review.items.filter(function (item) { return item.id !== b.getAttribute("data-remove"); });
+        render();
+      });
+    });
+    click("addRow", function () {
+      const field = document.getElementById("addRowText");
+      const text = field ? field.value.trim() : "";
+      if (!text || !state.review) return;
+      const result = parseMealText(text);
+      if (!result.items || !result.items.length) {
+        toast(result.error || "Kunde inte lägga till raden");
+        return;
+      }
+      state.review.items = state.review.items.concat(result.items);
+      render();
     });
     const amountField = document.getElementById("amountField");
     if (amountField) {
@@ -1762,8 +1864,18 @@
     });
   }
 
+  function analysisText() {
+    const draft = state.mealDraft;
+    if (draft.step === "samla") {
+      const names = (draft.scans || []).map(function (item) { return item.name; });
+      if ((draft.extra || "").trim()) names.push(draft.extra.trim());
+      return names.join(" och ");
+    }
+    return (draft.text || "").trim();
+  }
+
   function analyzeDraft() {
-    const text = state.mealDraft.step === "amount" ? composedMealText() : state.mealDraft.text.trim();
+    const text = analysisText();
     if (!text || state.aiBusy) return;
     state.aiBusy = true;
     state.aiError = null;
@@ -1863,7 +1975,7 @@
       const f = FOODS[i];
       for (let k = 0; k < f.keys.length; k++) {
         const key = f.keys[k];
-        const re = new RegExp("(?<![\\p{L}\\d])" + key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?![\\p{L}\\d])", "iu");
+        const re = new RegExp("(?<![\\p{L}\\d])" + key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?:er|ar|or)?(?![\\p{L}\\d])", "iu");
         if (key.length > bestLen && re.test(t)) {
           best = f;
           bestLen = key.length;
@@ -1910,26 +2022,18 @@
       document.body.classList.add("shot");
       state.appearance = "dark";
       applyTheme();
-      if (shot === "1") {
+      if (shot === "start" || shot === "1") {
         state.view = "register";
-        state.mealDraft.text = "150 g kycklingfilé";
-        state.mealDraft.step = "start";
-        state.mealDraft.kind = suggestedKind(new Date());
-      } else if (shot === "2") {
-        state.view = "register";
-        state.mealDraft.text = "150 g kycklingfilé";
-        state.mealDraft.kind = suggestedKind(new Date());
-        continueFromText();
-        return;
-      } else if (shot === "3") {
-        const text = "150 g kycklingfilé";
+        state.mealDraft = freshDraft();
+      } else if (shot === "granskning") {
+        const text = "2 kycklingfiléer och 4 skedar ris";
         const result = parseMealText(text);
         state.mealDraft.text = text;
-        state.mealDraft.kind = suggestedKind(new Date());
+        state.mealDraft.kind = "Middag";
         state.review = {
           description: text,
           date: isoDay(new Date()),
-          kind: state.mealDraft.kind,
+          kind: "Middag",
           items: result.items || []
         };
         state.view = "review";
