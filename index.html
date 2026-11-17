@@ -114,6 +114,27 @@
       -webkit-overflow-scrolling: touch;
       padding-bottom: 8px;
     }
+    #phone[data-fab="1"] #main { margin-bottom: 78px; }
+    .dock { position: relative; flex-shrink: 0; }
+    .fab {
+      position: absolute;
+      left: 50%;
+      bottom: calc(100% + 10px);
+      transform: translateX(-50%);
+      z-index: 4;
+      width: 60px;
+      height: 60px;
+      border: 0;
+      border-radius: 50%;
+      background: var(--kk-green);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+    }
+    .fab[hidden] { display: none; }
     #main::-webkit-scrollbar { width: 0; height: 0; }
     .muted { color: var(--kk-muted); font-size: 12px; }
     .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
@@ -356,11 +377,16 @@
         </span>
       </div>
       <main id="main" aria-live="polite"></main>
-      <nav class="tabs" aria-label="Huvudnavigation">
-        <button type="button" data-tab="overview" class="active" id="tab-overview"></button>
-        <button type="button" data-tab="history" id="tab-history"></button>
-        <button type="button" data-tab="settings" id="tab-settings"></button>
-      </nav>
+      <div class="dock">
+        <button type="button" class="fab" id="openRegister" aria-label="Registrera">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <nav class="tabs" aria-label="Huvudnavigation">
+          <button type="button" data-tab="overview" class="active" id="tab-overview"></button>
+          <button type="button" data-tab="history" id="tab-history"></button>
+          <button type="button" data-tab="settings" id="tab-settings"></button>
+        </nav>
+      </div>
       <div class="homebar"></div>
       <div class="toast" id="toast" role="status"></div>
     </div>
@@ -889,9 +915,18 @@
     toastTimer = setTimeout(function () { el.classList.remove("show"); }, 2200);
   }
 
+  function openRegistration() {
+    state.mealDraft.kind = suggestedKind(new Date());
+    state.mealDraft.date = isoDay(new Date());
+    go("register");
+  }
+
   function render() {
     applyTheme();
     const main = document.getElementById("main");
+    const onTab = state.view === "overview" || state.view === "history" || state.view === "settings";
+    document.getElementById("phone").setAttribute("data-fab", onTab ? "1" : "0");
+    document.getElementById("openRegister").hidden = !onTab;
     const views = { overview: renderOverview, history: renderHistory, settings: renderSettings, register: renderRegister, review: renderReview, weight: renderWeight };
     const fn = views[state.view] || renderOverview;
     main.innerHTML = fn();
@@ -983,7 +1018,6 @@
           '<p class="muted" style="margin-top:9px">' + num(stepLeft) + ' kvar · <span class="chip">exempeldata</span></p>' +
         "</section>" +
       "</div>" +
-      '<button type="button" class="primary" id="openRegister">' + icon("plus") + "Registrera</button>" +
       '<p class="note">Webbdemo · måltider och vikt sparas i den här webbläsaren</p>' +
       '<div class="spacer"></div>'
     );
@@ -1195,7 +1229,7 @@
     if (!keys.length) {
       return "<p class=\"muted\">Dina registreringar</p><h1>Historik</h1>" +
         '<section class="panel"><p class="muted">Din historik börjar här. Registrera din första måltid för att följa kalorier och makron över tid.</p></section>' +
-        '<button type="button" class="primary" id="openRegister">Registrera måltid</button>';
+        '<button type="button" class="primary" id="openRegisterHistory">Registrera måltid</button>';
     }
     const sections = keys.map(function (day) {
       const list = days[day].slice();
@@ -1384,11 +1418,7 @@
       const el = document.getElementById(id);
       if (el) el.addEventListener("click", fn);
     };
-    click("openRegister", function () {
-      state.mealDraft.kind = suggestedKind(new Date());
-      state.mealDraft.date = isoDay(new Date());
-      go("register");
-    });
+    click("openRegisterHistory", openRegistration);
     click("openWeight", function () { go("weight"); });
     click("openWeightFromRegister", function () { go("weight"); });
     click("backOverview", function () { go("overview"); });
@@ -1670,6 +1700,7 @@
         go(tab);
       });
     });
+    document.getElementById("openRegister").addEventListener("click", openRegistration);
     document.getElementById("appearanceBtn").addEventListener("click", function () {
       toggleAppearance();
     });
