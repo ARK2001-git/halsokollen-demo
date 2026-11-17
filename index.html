@@ -291,6 +291,31 @@
       display: inline-block; font-size: 10px; letter-spacing: .4px;
       text-transform: uppercase; color: var(--kk-muted);
     }
+    .or { display: flex; align-items: center; gap: 10px; color: var(--kk-muted); margin: 2px 0 8px; font-size: 14px; }
+    .or i { flex: 1; height: 1px; background: var(--kk-line); }
+    textarea.short-text { min-height: 72px; }
+    .stated {
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(50, 132, 94, 0.16); color: var(--kk-text);
+      border-radius: 12px; padding: 10px 12px; font-weight: 500; margin-bottom: 4px;
+    }
+    .stated[hidden] { display: none; }
+    .units { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: var(--kk-field); padding: 4px; border-radius: 12px; }
+    .units button { border: 0; background: transparent; color: var(--kk-text); border-radius: 9px; min-height: 36px; font-weight: 600; }
+    .units button.on { background: var(--kk-green); color: #fff; }
+    .quick { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+    .quick button { border: 0; background: var(--kk-field); color: var(--kk-text); border-radius: 12px; min-height: 40px; font-weight: 500; }
+    .quick button.on { background: var(--kk-green); color: #fff; }
+    .amount-big { display: flex; align-items: center; gap: 8px; background: var(--kk-field); border: 1px solid var(--kk-line); border-radius: 13px; padding: 4px 14px; }
+    .amount-big input { border: 0; background: transparent; font-size: 32px; font-weight: 500; padding: 8px 0; width: auto; flex: 1; }
+    .finder {
+      min-height: 160px; border: 2px solid var(--kk-green); border-radius: 18px;
+      display: flex; align-items: center; justify-content: center; text-align: center;
+      color: var(--kk-muted); padding: 16px; margin: 8px 0 12px;
+    }
+    body.shot { background: #181818; overflow: hidden; }
+    body.shot #stage { padding: 0; min-height: 844px; height: 844px; align-items: flex-start; justify-content: flex-start; }
+    body.shot #phone { border-radius: 0; box-shadow: none; }
 
     .segments {
       display: flex;
@@ -432,7 +457,8 @@
     chevronLeft: '<path d="M15 18l-6-6 6-6"/>',
     chevronRight: '<path d="M9 18l6-6-6-6"/>',
     check: '<path d="M5 12l5 5L20 7"/>',
-    checkCircle: '<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>'
+    checkCircle: '<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>',
+    camera: '<path d="M4.5 8.2h2.2l1.2-1.8h8.2l1.2 1.8H19.5A1.5 1.5 0 0 1 21 9.7v7.8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5V9.7a1.5 1.5 0 0 1 1.5-1.5z"/><circle cx="12" cy="13.4" r="3.1"/>'
   };
 
   function icon(name, size) {
@@ -797,7 +823,8 @@
     appearance: "dark", // dark | light | system
     meals: [],
     weights: [],
-    mealDraft: { text: "", date: isoDay(new Date()), kind: suggestedKind(new Date()) },
+    mealDraft: { text: "", date: isoDay(new Date()), kind: suggestedKind(new Date()), step: "start", name: "", amount: "", unit: "g", stated: null, source: "text", note: "" },
+    weightReturn: null,
     review: null,
     weightDate: isoDay(new Date()),
     weightValue: "",
@@ -916,9 +943,97 @@
     toastTimer = setTimeout(function () { el.classList.remove("show"); }, 2200);
   }
 
+  function freshDraft() {
+    return {
+      text: "",
+      date: isoDay(new Date()),
+      kind: suggestedKind(new Date()),
+      step: "start",
+      name: "",
+      amount: "",
+      unit: "g",
+      stated: null,
+      source: "text",
+      note: ""
+    };
+  }
+
+  function foodNameFromText(text) {
+    const cleaned = text.replace(new RegExp(UNIT_RE.source, "giu"), " ").replace(/[,.;:]+/g, " ").replace(/\s+/g, " ").trim();
+    if (!cleaned) return "Livsmedel";
+    return cleaned.charAt(0).toLocaleUpperCase("sv-SE") + cleaned.slice(1);
+  }
+
+  function chipLabel(value) {
+    return Number(value).toLocaleString("sv-SE", { maximumFractionDigits: 1 });
+  }
+
+  function quickAmounts(unit) {
+    if (unit === "ml") return [100, 150, 200, 250, 330];
+    if (unit === "cl") return [10, 15, 20, 25, 33];
+    if (unit === "dl") return [1, 1.5, 2, 2.5, 3];
+    return [50, 100, 150, 200, 250];
+  }
+
+  function amountMatchesDraft() {
+    const d = state.mealDraft;
+    if (!d.stated) return false;
+    const value = parseNum(d.amount);
+    return d.unit === d.stated.unit && value != null && Math.abs(value - d.stated.value) < 0.001;
+  }
+
+  function composedMealText() {
+    const d = state.mealDraft;
+    const mangd = String(d.amount).trim().replace(".", ",") + " " + d.unit;
+    if (d.source === "text") {
+      if (amountMatchesDraft()) return d.text.trim();
+      if (!d.stated) return d.text.trim() + ", " + mangd;
+      return (d.name || d.text.trim()) + " " + mangd;
+    }
+    return (d.name || "Livsmedel") + " " + mangd;
+  }
+
+  function continueFromText() {
+    const text = state.mealDraft.text.trim();
+    if (!text) return;
+    const amounts = explicitAmounts(text);
+    state.mealDraft.source = "text";
+    state.mealDraft.text = text;
+    state.mealDraft.name = foodNameFromText(text);
+    state.mealDraft.note = "";
+    if (amounts.length) {
+      const parts = amounts[0].split(" ");
+      state.mealDraft.stated = { text: amounts[0], value: parseNum(parts[0]), unit: parts[1] };
+      state.mealDraft.amount = parts[0];
+      state.mealDraft.unit = parts[1];
+      if (amounts.length > 1) state.mealDraft.note = "Texten innehåller flera mängder. Den första är ifylld.";
+    } else {
+      state.mealDraft.stated = null;
+      state.mealDraft.amount = "";
+      state.mealDraft.unit = "g";
+    }
+    state.mealDraft.step = "amount";
+    state.aiError = null;
+    render();
+  }
+
+  function hittaExempelprodukt() {
+    state.mealDraft.source = "barcode";
+    state.mealDraft.name = "Kycklingfilé, tillagad";
+    state.mealDraft.text = "";
+    state.mealDraft.stated = null;
+    state.mealDraft.amount = "";
+    state.mealDraft.unit = "g";
+    state.mealDraft.note = "Exempelträff · EAN 7310865004701. Näringsvärden per 100 g används i tolkningen.";
+    state.mealDraft.step = "amount";
+    state.aiError = null;
+    render();
+  }
+
   function openRegistration() {
-    state.mealDraft.kind = suggestedKind(new Date());
-    state.mealDraft.date = isoDay(new Date());
+    state.mealDraft = freshDraft();
+    state.review = null;
+    state.aiError = null;
     go("register");
   }
 
@@ -1044,42 +1159,83 @@
 
   function renderRegister() {
     const draft = state.mealDraft;
-    const amounts = explicitAmounts(draft.text);
-    const checks = amounts.map(function (a) {
-      return '<div class="check-item">' + icon("checkCircle", 14) + "<span>" + escapeHtml(a) + "</span></div>";
-    }).join("");
+    if (draft.step === "scan") return renderScan();
+    if (draft.step === "amount") return renderAmount();
     const today = isToday(parseISODay(draft.date));
     const mealBtns = KINDS.map(function (k) {
       return '<button type="button" class="meal-btn' + (draft.kind === k ? " selected" : "") + '" data-kind="' + k + '">' +
         escapeHtml(k) + (draft.kind === k ? icon("check", 14) : "") + "</button>";
     }).join("");
-    const busy = state.aiBusy;
     return (
       '<button type="button" class="back" id="backOverview">' + icon("chevronLeft") + "Översikt</button>" +
-      "<h1>Registrera</h1>" +
+      '<p class="muted">Steg 1 av 3</p>' +
+      "<h1>Vad har du ätit?</h1>" +
+      '<p class="hint">Skanna en streckkod eller skriv fritt. Mängden anger du i nästa steg.</p>' +
+      '<button type="button" class="primary" id="openScan">' + icon("camera") + "Skanna streckkod</button>" +
+      '<p class="hint">I demon simuleras kameran. På iPhone används VisionKit.</p>' +
+      '<div class="or" aria-hidden="true"><i></i><span>eller</span><i></i></div>' +
       '<section class="panel">' +
-        "<h2>Måltiden</h2>" +
-        '<p class="hint" style="margin-top:6px">Vad och hur mycket har du ätit eller druckit?</p>' +
-        '<textarea id="mealText" aria-label="Beskriv din måltid" placeholder="Till exempel: Bröd 2 skivor, totalt 80 g">' + escapeHtml(draft.text) + "</textarea>" +
-        '<p class="hint">Skriv g eller gram för vikt, och ml, cl eller dl för dryck. Det går också bra att bara skriva exempelvis kebabrulle — en normal portion uppskattas då.</p>' +
-        (checks ? '<div class="checks">' + checks + "</div>" : "") +
+        "<h2>Skriv vad du ätit</h2>" +
+        '<textarea id="mealText" class="short-text" aria-label="Vad du ätit" placeholder="Till exempel: 150 g kycklingfilé">' + escapeHtml(draft.text) + "</textarea>" +
+        '<p class="hint">Om texten redan innehåller mängd fylls den i och markeras med en bock.</p>' +
         '<label>När?</label>' +
         '<div class="date-nav">' +
           '<button type="button" id="mealPrev" aria-label="Föregående måltidsdatum">' + icon("chevronLeft") + "</button>" +
-          '<div class="date-label" id="mealDateLabel">' + mealDateLabel(draft.date) + "</div>" +
+          '<div class="date-label">' + mealDateLabel(draft.date) + "</div>" +
           '<button type="button" id="mealNext" aria-label="Nästa måltidsdatum"' + (today ? " disabled" : "") + ">" + icon("chevronRight") + "</button>" +
         "</div>" +
         '<div class="meal-grid">' + mealBtns + "</div>" +
       "</section>" +
-      '<button type="button" class="primary" id="analyzeBtn"' + (busy || !draft.text.trim() ? " disabled" : "") + ' style="margin:6px 0 8px">' +
-        icon("sparkles") + (busy ? "Analyserar…" : "Analysera med AI") +
+      '<button type="button" class="primary" id="continueText"' + (draft.text.trim() ? "" : " disabled") + ">Fortsätt</button>" +
+      '<button type="button" class="primary" id="openWeightFromRegister">Vikt</button>' +
+      '<p class="note">Inget sparas förrän du godkänner.</p>' +
+      '<div class="spacer"></div>'
+    );
+  }
+
+  function renderScan() {
+    return (
+      '<button type="button" class="back" id="closeScan">' + icon("chevronLeft") + "Tillbaka</button>" +
+      "<h1>Skanna streckkod</h1>" +
+      '<div class="finder">Rikta rutan mot streckkoden.<br>Kameran är simulerad i demon.</div>' +
+      '<button type="button" class="primary" id="simScan">' + icon("camera") + "Hitta exempelprodukt</button>" +
+      '<p class="note">Exempelträffen är kycklingfilé. Sedan anger du mängd, precis som efter en riktig skanning.</p>'
+    );
+  }
+
+  function renderAmount() {
+    const draft = state.mealDraft;
+    const matched = amountMatchesDraft();
+    const value = parseNum(draft.amount);
+    const units = ["g", "ml", "cl", "dl"].map(function (unit) {
+      return '<button type="button" data-unit="' + unit + '"' + (draft.unit === unit ? ' class="on"' : "") + ">" + unit + "</button>";
+    }).join("");
+    const chips = quickAmounts(draft.unit).map(function (amount) {
+      const on = value != null && Math.abs(value - amount) < 0.001;
+      return '<button type="button" data-chip="' + amount + '"' + (on ? ' class="on"' : "") + ">" + chipLabel(amount) + "</button>";
+    }).join("");
+    const canAnalyze = value != null && value > 0 && value <= 10000 && !state.aiBusy;
+    return (
+      '<button type="button" class="back" id="backToStart">' + icon("chevronLeft") + "Tillbaka</button>" +
+      '<p class="muted">Steg 2 av 3</p>' +
+      "<h1>Hur mycket?</h1>" +
+      "<h2>" + escapeHtml(draft.name || "Livsmedel") + "</h2>" +
+      (draft.source === "text" && draft.text ? '<p class="hint">' + escapeHtml(draft.text) + "</p>" : "") +
+      (draft.note ? '<p class="hint">' + escapeHtml(draft.note) + "</p>" : "") +
+      '<section class="panel">' +
+        '<div class="stated" id="statedBanner"' + (matched ? "" : " hidden") + ">" + icon("checkCircle", 16) + "<span>" + escapeHtml(draft.stated ? draft.stated.text : "") + " fanns i texten</span></div>" +
+        "<label>Enhet</label>" +
+        '<div class="units">' + units + "</div>" +
+        "<label>Snabbval</label>" +
+        '<div class="quick">' + chips + "</div>" +
+        "<label for=\"amountField\">Mängd</label>" +
+        '<div class="amount-big"><input id="amountField" type="text" inputmode="decimal" value="' + escapeHtml(draft.amount) + '" aria-label="Mängd"><span class="muted">' + escapeHtml(draft.unit) + "</span></div>" +
+      "</section>" +
+      '<button type="button" class="primary" id="analyzeBtn"' + (canAnalyze ? "" : " disabled") + ">" +
+        icon("sparkles") + (state.aiBusy ? "Tolkar…" : "Tolka med AI") +
       "</button>" +
       (state.aiError ? '<p class="error">' + escapeHtml(state.aiError) + "</p>" : "") +
-      '<p class="note">Demo · tolkningen sker lokalt med en inbyggd livsmedelstabell, inte med GPT.</p>' +
-      '<div class="row subhead"><h2>Dina favoriter</h2></div>' +
-      '<section class="panel"><p class="muted">Här kommer dina sparade favoritmåltider att finnas.</p></section>' +
-      '<button type="button" class="primary" id="openWeightFromRegister" style="margin:16px 0 8px">Vikt</button>' +
-      '<div class="spacer"></div>'
+      '<p class="note">Demo · tolkningen sker lokalt med en inbyggd livsmedelstabell, inte med GPT.</p>'
     );
   }
 
@@ -1105,7 +1261,7 @@
       "</div>";
     }).join("");
     return (
-      '<button type="button" class="back" id="backRegister">' + icon("chevronLeft") + "Registrera</button>" +
+      '<button type="button" class="back" id="backRegister">' + icon("chevronLeft") + "Mängd</button>" +
       "<h1>Ser det rätt ut?</h1>" +
       '<section class="panel">' +
         '<p class="demo">Demo-tolkning</p>' +
@@ -1117,7 +1273,7 @@
         '<p class="muted">Protein ' + dec(tot.protein) + " g · Kolhydrater " + dec(tot.carbs) + " g · Fett " + dec(tot.fat) + " g</p>" +
       "</section>" +
       '<button type="button" class="secondary" id="backRegister2" style="width:100%">Ändra</button>' +
-      '<button type="button" class="primary" id="confirmMeal" style="margin-top:12px">' + icon("check") + "Bekräfta och spara</button>" +
+      '<button type="button" class="primary" id="confirmMeal" style="margin-top:12px">' + icon("check") + "Godkänn</button>" +
       '<button type="button" class="back" id="cancelReview" style="margin:8px auto">Avbryt</button>' +
       '<div class="spacer"></div>'
     );
@@ -1420,11 +1576,25 @@
       if (el) el.addEventListener("click", fn);
     };
     click("openRegisterHistory", openRegistration);
-    click("openWeight", function () { go("weight"); });
-    click("openWeightFromRegister", function () { go("weight"); });
-    click("backOverview", function () { go("overview"); });
-    click("backRegister", function () { go("register"); });
-    click("backRegister2", function () { go("register"); });
+    click("openWeight", function () { state.weightReturn = null; go("weight"); });
+    click("openWeightFromRegister", function () { state.weightReturn = "register"; go("weight"); });
+    click("backOverview", function () {
+      if (state.view === "weight" && state.weightReturn) {
+        const back = state.weightReturn;
+        state.weightReturn = null;
+        go(back);
+        return;
+      }
+      state.weightReturn = null;
+      go("overview");
+    });
+    click("backRegister", function () { state.mealDraft.step = "amount"; go("register"); });
+    click("backRegister2", function () { state.mealDraft.step = "amount"; go("register"); });
+    click("openScan", function () { state.mealDraft.step = "scan"; render(); });
+    click("closeScan", function () { state.mealDraft.step = "start"; render(); });
+    click("simScan", hittaExempelprodukt);
+    click("continueText", continueFromText);
+    click("backToStart", function () { state.mealDraft.step = "start"; state.aiError = null; render(); });
     click("cancelReview", function () { state.review = null; go("overview"); });
 
     const mealText = document.getElementById("mealText");
@@ -1432,23 +1602,8 @@
       mealText.addEventListener("input", function () {
         state.mealDraft.text = mealText.value;
         state.aiError = null;
-        const amounts = explicitAmounts(mealText.value);
-        let box = main.querySelector(".checks");
-        if (amounts.length) {
-          const html = amounts.map(function (a) {
-            return '<div class="check-item">' + icon("checkCircle", 14) + "<span>" + escapeHtml(a) + "</span></div>";
-          }).join("");
-          if (!box) {
-            box = document.createElement("div");
-            box.className = "checks";
-            mealText.nextElementSibling.insertAdjacentElement("afterend", box);
-          }
-          box.innerHTML = html;
-        } else if (box) {
-          box.remove();
-        }
-        const btn = document.getElementById("analyzeBtn");
-        if (btn && !state.aiBusy) btn.disabled = !mealText.value.trim();
+        const btn = document.getElementById("continueText");
+        if (btn) btn.disabled = !mealText.value.trim();
       });
     }
 
@@ -1474,6 +1629,35 @@
     });
 
     click("analyzeBtn", function () { analyzeDraft(); });
+    main.querySelectorAll("[data-unit]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        state.mealDraft.unit = b.getAttribute("data-unit");
+        render();
+        const field = document.getElementById("amountField");
+        if (field) field.focus();
+      });
+    });
+    main.querySelectorAll("[data-chip]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        state.mealDraft.amount = chipLabel(Number(b.getAttribute("data-chip")));
+        render();
+      });
+    });
+    const amountField = document.getElementById("amountField");
+    if (amountField) {
+      amountField.addEventListener("input", function () {
+        state.mealDraft.amount = amountField.value;
+        const value = parseNum(amountField.value);
+        const banner = document.getElementById("statedBanner");
+        if (banner) banner.hidden = !amountMatchesDraft();
+        const btn = document.getElementById("analyzeBtn");
+        if (btn && !state.aiBusy) btn.disabled = !(value != null && value > 0 && value <= 10000);
+        main.querySelectorAll("[data-chip]").forEach(function (chip) {
+          const on = value != null && Math.abs(value - Number(chip.getAttribute("data-chip"))) < 0.001;
+          chip.classList.toggle("on", on);
+        });
+      });
+    }
 
     main.querySelectorAll(".amount-input").forEach(function (inp) {
       inp.addEventListener("input", function () {
@@ -1579,7 +1763,7 @@
   }
 
   function analyzeDraft() {
-    const text = state.mealDraft.text.trim();
+    const text = state.mealDraft.step === "amount" ? composedMealText() : state.mealDraft.text.trim();
     if (!text || state.aiBusy) return;
     state.aiBusy = true;
     state.aiError = null;
@@ -1630,9 +1814,7 @@
     });
     save();
     state.review = null;
-    state.mealDraft.text = "";
-    state.mealDraft.date = isoDay(new Date());
-    state.mealDraft.kind = suggestedKind(new Date());
+    state.mealDraft = freshDraft();
     toast("Måltiden är sparad");
     go("overview");
   }
@@ -1723,6 +1905,36 @@
     state.weightValue = existingToday ? dec(existingToday.kilograms) : "";
     setupTabs();
     applyTheme();
+    const shot = new URLSearchParams(location.search).get("steg");
+    if (shot) {
+      document.body.classList.add("shot");
+      state.appearance = "dark";
+      applyTheme();
+      if (shot === "1") {
+        state.view = "register";
+        state.mealDraft.text = "150 g kycklingfilé";
+        state.mealDraft.step = "start";
+        state.mealDraft.kind = suggestedKind(new Date());
+      } else if (shot === "2") {
+        state.view = "register";
+        state.mealDraft.text = "150 g kycklingfilé";
+        state.mealDraft.kind = suggestedKind(new Date());
+        continueFromText();
+        return;
+      } else if (shot === "3") {
+        const text = "150 g kycklingfilé";
+        const result = parseMealText(text);
+        state.mealDraft.text = text;
+        state.mealDraft.kind = suggestedKind(new Date());
+        state.review = {
+          description: text,
+          date: isoDay(new Date()),
+          kind: state.mealDraft.kind,
+          items: result.items || []
+        };
+        state.view = "review";
+      }
+    }
     render();
   }
 
